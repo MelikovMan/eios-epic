@@ -1,0 +1,760 @@
+# Занятие 5. Роутинг, библиотеки для роутинга.
+
+## 1. Введение в клиентскую маршрутизацию
+### 1.1. Зачем нужна клиентская маршрутизация?
+Проблемы без роутинга:
+
+```jsx
+// ❌ РУЧНОЕ УПРАВЛЕНИЕ: Сложно масштабировать
+function App() {
+  const [currentPage, setCurrentPage] = useState('home');
+  
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'home': return <Home />;
+      case 'about': return <About />;
+      case 'contact': return <Contact />;
+      default: return <NotFound />;
+    }
+  };
+  
+  return (
+    <div>
+      <nav>
+        <button onClick={() => setCurrentPage('home')}>Главная</button>
+        <button onClick={() => setCurrentPage('about')}>О нас</button>
+        <button onClick={() => setCurrentPage('contact')}>Контакты</button>
+      </nav>
+      {renderPage()}
+    </div>
+  );
+}
+```
+Преимущества роутинга:
+
+Чистые URL для навигации и SEO
+
+История браузера и кнопки назад/вперед
+
+Защита маршрутов и ленивая загрузка
+
+Параметры URL и состояние приложения
+
+## 2. React Router v6
+### 2.1. Базовая настройка и компоненты
+```jsx
+// main.jsx
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
+
+// App.jsx
+import { Routes, Route, Link } from 'react-router-dom';
+import { Home, About, Contact, Products, ProductDetail } from './pages';
+
+function App() {
+  return (
+    <div className="app">
+      {/* Навигация */}
+      <nav>
+        <Link to="/">Главная</Link>
+        <Link to="/about">О нас</Link>
+        <Link to="/contact">Контакты</Link>
+        <Link to="/products">Продукты</Link>
+      </nav>
+      
+      {/* Маршруты */}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+}
+```
+### 2.2. Динамические маршруты и параметры
+```jsx
+// pages/ProductDetail.jsx
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
+
+function ProductDetail() {
+  // Получение параметров из URL
+  const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  
+  // Получение query параметров
+  const variant = searchParams.get('variant');
+  const category = searchParams.get('category');
+  
+  const updateVariant = (newVariant) => {
+    // Обновление query параметров
+    setSearchParams({ variant: newVariant, category });
+  };
+  
+  return (
+    <div>
+      <h1>Продукт {id}</h1>
+      <p>Текущий путь: {location.pathname}</p>
+      <p>Вариант: {variant}</p>
+      <button onClick={() => updateVariant('red')}>
+        Выбрать красный
+      </button>
+    </div>
+  );
+}
+
+// pages/Products.jsx
+import { Link, Outlet } from 'react-router-dom';
+
+function Products() {
+  const products = [
+    { id: 1, name: 'Ноутбук', category: 'electronics' },
+    { id: 2, name: 'Книга', category: 'books' },
+    { id: 3, name: 'Футболка', category: 'clothing' }
+  ];
+  
+  return (
+    <div className="products-layout">
+      <aside>
+        <h3>Категории</h3>
+        <ul>
+          <li><Link to="/products?category=electronics">Электроника</Link></li>
+          <li><Link to="/products?category=books">Книги</Link></li>
+          <li><Link to="/products?category=clothing">Одежда</Link></li>
+        </ul>
+      </aside>
+      
+      <main>
+        <h2>Список продуктов</h2>
+        <div className="products-grid">
+          {products.map(product => (
+            <Link 
+              key={product.id} 
+              to={`/products/${product.id}?category=${product.category}`}
+              className="product-card"
+            >
+              <h3>{product.name}</h3>
+              <span>{product.category}</span>
+            </Link>
+          ))}
+        </div>
+        
+        {/* Вложенные маршруты */}
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+### 2.3. Программная навигация
+```jsx
+// hooks/useNavigation.js
+import { useNavigate, useLocation } from 'react-router-dom';
+
+export function useNavigation() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const goBack = () => navigate(-1);
+  const goForward = () => navigate(1);
+  
+  const navigateWithState = (path, state) => {
+    navigate(path, { state });
+  };
+  
+  const getState = () => location.state;
+  
+  return {
+    navigate,
+    goBack,
+    goForward,
+    navigateWithState,
+    getState,
+    currentPath: location.pathname
+  };
+}
+
+// components/LoginForm.jsx
+import { useNavigation } from '../hooks/useNavigation';
+
+function LoginForm() {
+  const { navigateWithState, getState } = useNavigation();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      // Логика входа
+      await loginUser(formData);
+      
+      // Перенаправление с сохранением предыдущего маршрута
+      const from = getState()?.from?.pathname || '/dashboard';
+      navigateWithState(from, { message: 'Добро пожаловать!' });
+    } catch (error) {
+      console.error('Ошибка входа:', error);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="email"
+        value={formData.email}
+        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+        placeholder="Email"
+      />
+      <input
+        type="password"
+        value={formData.password}
+        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+        placeholder="Пароль"
+      />
+      <button type="submit">Войти</button>
+    </form>
+  );
+}
+
+// Защищенный маршрут
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  if (!user) {
+    // Сохраняем текущий маршрут для возврата после входа
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  return children;
+}
+```
+### 2.4. Вложенные маршруты и макеты
+```jsx
+// layouts/DashboardLayout.jsx
+import { Outlet, Link, useLocation } from 'react-router-dom';
+
+function DashboardLayout() {
+  const location = useLocation();
+  
+  return (
+    <div className="dashboard-layout">
+      <aside className="sidebar">
+        <nav>
+          <Link 
+            to="/dashboard" 
+            className={location.pathname === '/dashboard' ? 'active' : ''}
+          >
+            Обзор
+          </Link>
+          <Link 
+            to="/dashboard/profile"
+            className={location.pathname === '/dashboard/profile' ? 'active' : ''}
+          >
+            Профиль
+          </Link>
+          <Link 
+            to="/dashboard/settings"
+            className={location.pathname === '/dashboard/settings' ? 'active' : ''}
+          >
+            Настройки
+          </Link>
+        </nav>
+      </aside>
+      
+      <main className="dashboard-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+// App.jsx с вложенными маршрутами
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      
+      {/* Защищенные маршруты с layout */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardOverview />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+```
+### 2.5. Ленивая загрузка маршрутов
+```jsx
+import { lazy, Suspense } from 'react';
+
+// Ленивая загрузка компонентов
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Reports = lazy(() => import('./pages/Reports'));
+
+// Компонент загрузки
+function RouteLoader() {
+  return (
+    <div className="route-loader">
+      <div className="spinner"></div>
+      <p>Загрузка...</p>
+    </div>
+  );
+}
+
+// Маршруты с ленивой загрузкой
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <Suspense fallback={<RouteLoader />}>
+              <AdminPanel />
+            </Suspense>
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/analytics" 
+        element={
+          <Suspense fallback={<RouteLoader />}>
+            <Analytics />
+          </Suspense>
+        } 
+      />
+      
+      <Route 
+        path="/reports/*" 
+        element={
+          <Suspense fallback={<RouteLoader />}>
+            <Reports />
+          </Suspense>
+        } 
+      />
+    </Routes>
+  );
+}
+```
+## 3. TanStack Router
+### 3.1. Введение и настройка
+```jsx
+// main.jsx
+import { createRoot } from 'react-dom/client';
+import { RouterProvider } from '@tanstack/react-router';
+import { routeTree } from './routeTree.gen';
+
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent', // Предзагрузка при наведении
+  context: {
+    auth: undefined, // Будет установлено позже
+  },
+});
+
+// Регистрация router для TypeScript
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+createRoot(document.getElementById('root')).render(
+  <RouterProvider router={router} />
+);
+```
+### 3.2. Определение маршрутов
+```jsx
+// routes/__root.jsx
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { TanStackRouterDevtools } from '@tanstack/router-devtools';
+
+export const Route = createRootRoute({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return (
+    <>
+      <div className="p-2 flex gap-2">
+        <Link to="/" className="[&.active]:font-bold">
+          Главная
+        </Link>
+        <Link to="/about" className="[&.active]:font-bold">
+          О нас
+        </Link>
+        <Link to="/products" className="[&.active]:font-bold">
+          Продукты
+        </Link>
+      </div>
+      <hr />
+      <Outlet />
+      <TanStackRouterDevtools />
+    </>
+  );
+}
+
+// routes/index.jsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/')({
+  component: HomeComponent,
+});
+
+function HomeComponent() {
+  return (
+    <div className="p-2">
+      <h3>Добро пожаловать!</h3>
+    </div>
+  );
+}
+
+// routes/products/index.jsx
+import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/products')({
+  component: ProductsComponent,
+});
+
+function ProductsComponent() {
+  const products = [
+    { id: 1, name: 'Продукт 1' },
+    { id: 2, name: 'Продукт 2' },
+    { id: 3, name: 'Продукт 3' },
+  ];
+  
+  return (
+    <div className="p-2 flex gap-2">
+      <div className="w-48 border-r">
+        <ul>
+          {products.map((product) => (
+            <li key={product.id}>
+              <Link
+                to="/products/$productId"
+                params={{ productId: product.id.toString() }}
+                className="block py-1 text-blue-800 hover:text-blue-600 [&.active]:font-bold"
+              >
+                {product.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <Outlet />
+      </div>
+    </div>
+  );
+}
+```
+### 3.3. Параметры и загрузка данных
+```jsx
+// routes/products/$productId.jsx
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/products/$productId')({
+  loader: async ({ params }) => {
+    // Загрузка данных для маршрута
+    const response = await fetch(`/api/products/${params.productId}`);
+    if (!response.ok) throw new Error('Продукт не найден');
+    return response.json();
+  },
+  component: ProductComponent,
+});
+
+function ProductComponent() {
+  const product = Route.useLoaderData();
+  
+  return (
+    <div className="p-2">
+      <h4>{product.name}</h4>
+      <p>Цена: {product.price} руб.</p>
+      <p>{product.description}</p>
+    </div>
+  );
+}
+
+// routes/products/index.jsx с поисковыми параметрами
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/products/')({
+  validateSearch: (search) => {
+    // Валидация search параметров
+    return {
+      category: search.category || 'all',
+      sort: search.sort || 'name',
+      page: Number(search.page) || 1,
+    };
+  },
+  loaderDeps: ({ search }) => ({
+    // Зависимости для загрузчика
+    category: search.category,
+    sort: search.sort,
+    page: search.page,
+  }),
+  loader: async ({ deps }) => {
+    // Загрузка данных с учетом search параметров
+    const response = await fetch(
+      `/api/products?category=${deps.category}&sort=${deps.sort}&page=${deps.page}`
+    );
+    return response.json();
+  },
+  component: ProductsComponent,
+});
+
+function ProductsComponent() {
+  const products = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  
+  const updateSearch = (updates) => {
+    navigate({
+      search: (prev) => ({ ...prev, ...updates }),
+    });
+  };
+  
+  return (
+    <div>
+      <div className="filters">
+        <select 
+          value={search.category} 
+          onChange={(e) => updateSearch({ category: e.target.value })}
+        >
+          <option value="all">Все категории</option>
+          <option value="electronics">Электроника</option>
+          <option value="books">Книги</option>
+        </select>
+        
+        <select
+          value={search.sort}
+          onChange={(e) => updateSearch({ sort: e.target.value })}
+        >
+          <option value="name">По имени</option>
+          <option value="price">По цене</option>
+        </select>
+      </div>
+      
+      <div className="products-grid">
+        {products.map(product => (
+          <div key={product.id} className="product-card">
+            <h3>{product.name}</h3>
+            <p>{product.price} руб.</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+### 3.4. Защита маршрутов и аутентификация
+```jsx
+// routes/profile.tsx
+import { createFileRoute, redirect } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/profile')({
+  beforeLoad: ({ context }) => {
+    // Проверка аутентификации перед загрузкой
+    if (!context.auth?.user) {
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
+  loader: async ({ context }) => {
+    // Загрузка данных профиля
+    return await context.auth.getProfile();
+  },
+  component: ProfileComponent,
+});
+
+function ProfileComponent() {
+  const profile = Route.useLoaderData();
+  
+  return (
+    <div className="p-2">
+      <h3>Профиль</h3>
+      <p>Имя: {profile.name}</p>
+      <p>Email: {profile.email}</p>
+    </div>
+  );
+}
+
+// Настройка router с контекстом аутентификации
+function createRouterWithAuth(auth) {
+  return createRouter({
+    routeTree,
+    context: {
+      auth, // Передаем auth в контекст
+    },
+  });
+}
+
+// Provider в корне приложения
+function App() {
+  const auth = useAuth(); // Ваш хук аутентификации
+  
+  const router = createRouterWithAuth(auth);
+  
+  return <RouterProvider router={router} />;
+}
+```
+## 4. Сравнительный анализ
+|Критерий	        |React Router	    |TanStack Router         |
+|Подход к данным	|Отдельные хуки	    |Встроенные loaders      |
+|TypeScript	        |Хорошая поддержка	|Исключительная поддержка|
+|Размер бандла	    |~6KB	            |~13KB (с devtools)      |
+|Простота	        |Очень простой	    |Умеренная сложность     |
+|DevTools	        |Нет встроенных	    |Отличные DevTools       |
+|Code Splitting	    |Ручная настройка	|Автоматическая          |
+|Экосистема	        |Огромная	        |Растущая                |
+
+## 5. Продвинутые паттерны
+### 5.1. Parallel Routes (React Router)
+```jsx
+// app/dashboard/layout.jsx
+import { Outlet } from 'react-router-dom';
+
+export default function DashboardLayout() {
+  return (
+    <div className="dashboard">
+      <Sidebar />
+      <main>
+        <Outlet />
+      </main>
+      <NotificationsPanel />
+    </div>
+  );
+}
+
+// app/dashboard/notifications.jsx
+export default function NotificationsPanel() {
+  return (
+    <aside className="notifications">
+      <h3>Уведомления</h3>
+      {/* Содержимое уведомлений */}
+    </aside>
+  );
+}
+```
+### 5.2. Route Prefetching (TanStack Router)
+```jsx
+// Компонент с предзагрузкой
+function ProductLink({ product }) {
+  const { preloadRoute } = useRouter();
+  
+  return (
+    <Link
+      to="/products/$productId"
+      params={{ productId: product.id.toString() }}
+      onMouseEnter={() => 
+        preloadRoute({ to: '/products/$productId', params: { productId: product.id.toString() } })
+      }
+    >
+      {product.name}
+    </Link>
+  );
+}
+
+// Глобальная настройка предзагрузки
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent', // Предзагрузка при наведении
+  defaultPreloadDelay: 50, // Задержка перед предзагрузкой
+});
+```
+### 5.3. Анимации переходов
+```jsx
+// components/AnimatedRoutes.jsx
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Home />
+            </motion.div>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <About />
+            </motion.div>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+```
+
+
+
+## Выводы
+React Router - стандарт де-факто, простой и понятный
+
+TanStack Router - современный подход с встроенной загрузкой данных
+
+Выбор зависит от сложности приложения и требований к данным
+
+Оба роутера поддерживают TypeScript и современные паттерны
+
+Миграция между ними возможна, но требует планирования
+
+Лучшие практики включают правильную структуру и обработку ошибок
+
+## Дополнительные материалы
+1. [React Router Documentation](https://reactrouter.com/)
+
+2. [TanStack Router Documentation](https://tanstack.com/router/latest)
+
+
+
+

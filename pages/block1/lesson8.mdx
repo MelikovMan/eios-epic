@@ -1,0 +1,498 @@
+# Оптимизация компонентов. useMemo и useCallback. React.memo.
+
+## 1. Проблема излишних перерисовок
+### 1.1. Почему компоненты перерисовываются слишком часто?
+React перерисовывает компоненты в трех основных случаях:
+
+Изменение состояния компонента (useState, useReducer)
+
+Изменение props компонента
+
+Перерисовка родительского компонента
+
+```jsx
+// ❌ ПРОБЛЕМА: Дорогие вычисления при каждом рендере
+function ExpensiveComponent({ items, filter }) {
+  // Эта функция выполняется при КАЖДОМ рендере
+  const expensiveCalculation = (data) => {
+    console.log('Выполняется дорогое вычисление...');
+    // Имитация тяжелой операции (сортировка, фильтрация и т.д.)
+    return data
+      .filter(item => item.includes(filter))
+      .sort()
+      .map(item => item.toUpperCase());
+  };
+  
+  const processedItems = expensiveCalculation(items);
+  
+  return (
+    <div>
+      {processedItems.map(item => (
+        <div key={item}>{item}</div>
+      ))}
+    </div>
+  );
+}
+
+// Родительский компонент
+function ParentComponent() {
+  const [count, setCount] = useState(0);
+  const [filter, setFilter] = useState('');
+  
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>
+        Count: {count} // Перерисовывает ParentComponent и все дочерние
+      </button>
+      
+      <input 
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Фильтр"
+      />
+      
+      <ExpensiveComponent 
+        items={['apple', 'banana', 'orange', 'grape']}
+        filter={filter}
+      />
+    </div>
+  );
+}
+```
+Проблема: При клике на кнопку счетчика выполняется дорогое вычисление, хотя items и filter не изменились!
+
+## 2. Хук useMemo
+### 2.1. Что такое useMemo?
+useMemo — это хук для мемоизации (кэширования) результатов дорогостоящих вычислений.
+
+```jsx
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+```
+Функция вычисления — выполняется только при изменении зависимостей
+
+Массив зависимостей — определяет, когда пересчитывать значение
+
+Возвращает — мемоизированное значение
+
+## 2.2. Базовое использование useMemo
+```jsx
+import { useMemo } from 'react';
+
+function OptimizedComponent({ items, filter }) {
+  // useMemo кэширует результат вычисления
+  const processedItems = useMemo(() => {
+    console.log('Выполняется дорогое вычисление...');
+    
+    return items
+      .filter(item => item.includes(filter))
+      .sort()
+      .map(item => item.toUpperCase());
+  }, [items, filter]); // Пересчитывать только при изменении items или filter
+  
+  return (
+    <div>
+      {processedItems.map(item => (
+        <div key={item}>{item}</div>
+      ))}
+    </div>
+  );
+}
+```
+## 2.3. Практические примеры useMemo
+Пример 1: Сложные вычисления
+
+```jsx
+function FinancialCalculator({ transactions, currencyRate }) {
+  const financialSummary = useMemo(() => {
+    console.log('Вычисление финансового отчета...');
+    
+    const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+    const average = transactions.length ? total / transactions.length : 0;
+    const convertedTotal = total * currencyRate;
+    
+    // Сложная аналитика
+    const categories = {};
+    transactions.forEach(t => {
+      categories[t.category] = (categories[t.category] || 0) + t.amount;
+    });
+    
+    return {
+      total: convertedTotal,
+      average,
+      categories,
+      transactionCount: transactions.length
+    };
+  }, [transactions, currencyRate]); // Зависимости
+  
+  return (
+    <div>
+      <h3>Финансовый отчет</h3>
+      <p>Общая сумма: {financialSummary.total.toFixed(2)}</p>
+      <p>Средняя сумма: {financialSummary.average.toFixed(2)}</p>
+      <p>Количество операций: {financialSummary.transactionCount}</p>
+    </div>
+  );
+}
+```
+## Пример 2: Фильтрация и сортировка
+
+```jsx
+function ProductList({ products, category, sortBy, searchQuery }) {
+  const filteredAndSortedProducts = useMemo(() => {
+    console.log('Фильтрация и сортировка продуктов...');
+    
+    let result = products;
+    
+    // Фильтрация по категории
+    if (category) {
+      result = result.filter(product => product.category === category);
+    }
+    
+    // Поиск
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query)
+      );
+    }
+    
+    // Сортировка
+    if (sortBy === 'price') {
+      result = [...result].sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'name') {
+      result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    return result;
+  }, [products, category, sortBy, searchQuery]);
+  
+  return (
+    <div>
+      {filteredAndSortedProducts.map(product => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+```
+## Пример 3: Форматирование данных
+
+``` jsx
+function UserDashboard({ users, dateRange }) {
+  const dashboardData = useMemo(() => {
+    console.log('Форматирование данных дашборда...');
+    
+    const formattedUsers = users.map(user => ({
+      ...user,
+      fullName: `${user.firstName} ${user.lastName}`,
+      lastActive: formatDate(user.lastLogin),
+      status: user.isActive ? 'Активен' : 'Неактивен'
+    }));
+    
+    const stats = {
+      totalUsers: users.length,
+      activeUsers: users.filter(u => u.isActive).length,
+      newThisWeek: users.filter(u => 
+        isThisWeek(new Date(u.registrationDate))
+      ).length
+    };
+    
+    return { formattedUsers, stats };
+  }, [users, dateRange]);
+  
+  return (
+    <div>
+      <DashboardStats stats={dashboardData.stats} />
+      <UserTable users={dashboardData.formattedUsers} />
+    </div>
+  );
+}
+```
+## 3. Хук useCallback
+### 3.1. Что такое useCallback?
+useCallback — это хук для мемоизации функций. Он возвращает мемоизированную версию функции, которая изменяется только при изменении зависимостей.
+
+```jsx
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b);
+}, [a, b]);
+```
+### 3.2. Зачем нужен useCallback?
+Проблема:
+
+```jsx
+function ParentComponent() {
+  const [count, setCount] = useState(0);
+  const [value, setValue] = useState('');
+  
+  // ❌ НОВАЯ функция при каждом рендере
+  const handleSubmit = () => {
+    console.log('Submitted:', value);
+  };
+  
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>
+        Count: {count}
+      </button>
+      <ChildComponent onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+// React.memo предотвращает перерисовку, если props не изменились
+const ChildComponent = React.memo(({ onSubmit }) => {
+  console.log('ChildComponent rendered'); // ❌ Выводится при каждом клике!
+  return <button onClick={onSubmit}>Submit</button>;
+});
+```
+Решение с useCallback:
+
+```jsx
+function ParentComponent() {
+  const [count, setCount] = useState(0);
+  const [value, setValue] = useState('');
+  
+  // ✅ Мемоизированная функция (не создается заново при каждом рендере)
+  const handleSubmit = useCallback(() => {
+    console.log('Submitted:', value);
+  }, [value]); // Создаем новую функцию только при изменении value
+  
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>
+        Count: {count}
+      </button>
+      <ChildComponent onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+const ChildComponent = React.memo(({ onSubmit }) => {
+  console.log('ChildComponent rendered'); // ✅ Выводится только при изменении onSubmit
+  return <button onClick={onSubmit}>Submit</button>;
+});
+```
+### 3.3. Практические примеры useCallback
+Пример 1: Обработчики событий
+
+```jsx
+function ProductList({ products, onProductUpdate, onProductDelete }) {
+  // Мемоизируем обработчики, чтобы не передавать новые функции в дочерние компоненты
+  const handleQuantityChange = useCallback((productId, newQuantity) => {
+    onProductUpdate(productId, { quantity: newQuantity });
+  }, [onProductUpdate]);
+  
+  const handleDelete = useCallback((productId) => {
+    onProductDelete(productId);
+  }, [onProductDelete]);
+  
+  return (
+    <div>
+      {products.map(product => (
+        <ProductItem
+          key={product.id}
+          product={product}
+          onQuantityChange={handleQuantityChange}
+          onDelete={handleDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ProductItem не будет перерисовываться без необходимости
+const ProductItem = React.memo(({ product, onQuantityChange, onDelete }) => {
+  return (
+    <div className="product-item">
+      <span>{product.name}</span>
+      <input
+        type="number"
+        value={product.quantity}
+        onChange={(e) => onQuantityChange(product.id, parseInt(e.target.value))}
+      />
+      <button onClick={() => onDelete(product.id)}>Удалить</button>
+    </div>
+  );
+});
+```
+Пример 2: Колбэки для эффектов
+
+```jsx
+function DataFetcher({ endpoint, queryParams }) {
+  const [data, setData] = useState(null);
+  
+  // useCallback делает функцию стабильной для useEffect
+  const fetchData = useCallback(async () => {
+    const url = `${endpoint}?${new URLSearchParams(queryParams)}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    setData(result);
+  }, [endpoint, queryParams]); // Зависимости для пересоздания функции
+  
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]); // Теперь эффект срабатывает только при изменении fetchData
+  
+  return <div>{/* отображение данных */}</div>;
+}
+```
+Пример 3: Оптимизированные формы
+
+```jsx
+function UserForm({ initialData, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState(initialData);
+  
+  // Мемоизированные обработчики
+  const handleChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+  
+  const handleSubmit = useCallback((e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  }, [formData, onSubmit]);
+  
+  const handleReset = useCallback(() => {
+    setFormData(initialData);
+  }, [initialData]);
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <FormInput
+        label="Имя"
+        value={formData.name}
+        onChange={(value) => handleChange('name', value)}
+      />
+      <FormInput
+        label="Email"
+        value={formData.email}
+        onChange={(value) => handleChange('email', value)}
+      />
+      <button type="submit">Сохранить</button>
+      <button type="button" onClick={onCancel}>Отмена</button>
+      <button type="button" onClick={handleReset}>Сбросить</button>
+    </form>
+  );
+}
+
+// Оптимизированные поля формы
+const FormInput = React.memo(({ label, value, onChange }) => {
+  return (
+    <div>
+      <label>{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+});
+```
+## 4. Совместное использование useMemo и useCallback
+### 4.1. Комплексная оптимизация
+```jsx
+function OptimizedDashboard({ users, filters, dateRange }) {
+  // Мемоизация вычисленных данных
+  const dashboardStats = useMemo(() => {
+    return calculateDashboardStats(users, filters, dateRange);
+  }, [users, filters, dateRange]);
+  
+  // Мемоизация функций
+  const handleUserAction = useCallback((action, userId) => {
+    // Обработка действий пользователя
+    console.log(action, userId);
+  }, []);
+  
+  const handleFilterChange = useCallback((newFilters) => {
+    // Обновление фильтров
+    console.log(newFilters);
+  }, []);
+  
+  // Мемоизация конфигурации
+  const chartConfig = useMemo(() => ({
+    type: 'bar',
+    colors: ['#ff6b6b', '#4ecdc4', '#45b7d1'],
+    animation: { duration: 500 }
+  }), []);
+  
+  return (
+    <div>
+      <DashboardHeader 
+        stats={dashboardStats}
+        onFilterChange={handleFilterChange}
+      />
+      <UserTable 
+        users={users}
+        onUserAction={handleUserAction}
+        config={chartConfig}
+      />
+    </div>
+  );
+}
+```
+
+## 5 Правила применения
+Используйте useMemo когда:
+
+Вычисления действительно дорогие (сортировка, фильтрация больших массивов)
+
+Создаются новые объекты/массивы, которые передаются в оптимизированные компоненты
+
+Вычисления зависят от изменяющихся зависимостей
+
+Используйте useCallback когда:
+
+Функции передаются в дочерние компоненты, обернутые в React.memo
+
+Функции используются в зависимостях useEffect
+
+Функции являются зависимостями других хуков
+
+## 6. Измерение производительности
+### 6.1. React DevTools Profiler
+```jsx
+import { Profiler } from 'react';
+
+function App() {
+  const onRender = (id, phase, actualDuration, baseDuration, startTime, commitTime) => {
+    console.log({
+      id,
+      phase,
+      actualDuration, // Время текущего рендера
+      baseDuration,   // Время без мемоизации
+      startTime,
+      commitTime
+    });
+  };
+  
+  return (
+    <Profiler id="OptimizedComponent" onRender={onRender}>
+      <OptimizedComponent />
+    </Profiler>
+  );
+}
+```
+
+## Выводы
+useMemo кэширует результаты вычислений и предотвращает лишние вычисления
+
+useCallback кэширует функции и предотвращает лишние перерисовки дочерних компонентов
+
+Используйте эти хуки осознанно — не оптимизируйте prematurely
+
+Измеряйте производительность перед оптимизацией
+
+Избегайте избыточной оптимизации простых операций
+
+## Дополнительные материалы
+1. [React Docs - useMemo](https://react.dev/reference/react/useMemo)
+
+2. [React Docs - useCallback](https://react.dev/reference/react/useCallback)
+
+3. [Когда использовать useMemo и useCallback] (https://kentcdodds.com/blog/usememo-and-usecallback)
+
+
+
+

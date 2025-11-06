@@ -1,55 +1,50 @@
 import {LinkButton} from '@/components/Button'
 import {Github} from 'lucide-react'
 
-# Introduction Nextra v3
+# Рабочая учебная программа (РУП)
+по курсу: "JS фреймворки для разработки пользовательского интерфейса"
 
-Nextra v3, released on September 28, 2024, is a significant update to the Nextra framework, enhancing its capabilities for building content-focused websites atop Next.js. 
+## 1. Цель изучения учебного курса:
+Формирование у обучающихся систематизированных знаний, практических умений и навыков разработки современных, интерактивных и отзывчивых пользовательских интерфейсов (UI) с использованием популярных JavaScript фреймворков, подготовка к самостоятельной работе в качестве Frontend-разработчика.
 
-A major advancement in this version is the transition to MDX 3, enabling seamless integration of React components, variable interpolation, and LaTeX within the table of contents. 
+## 2. Задачи данного учебного курса:
 
-The update also introduces a new styling approach for code blocks, aligning with Next.js aesthetics, and incorporates 'shikiji' for syntax highlighting, replacing 'shiki'. 
+Теоретическая задача: Ознакомить с фундаментальными концепциями, архитектурными подходами (например, компонентный подход, Virtual DOM, реактивное программирование) и экосистемой современных JS-фреймворков.
 
-To enhance customization, Nextra v3 removes support for '_meta.json' files, advocating the use of `_meta.{js,jsx,ts,tsx}` instead, allowing for more dynamic configurations. 
+Практическая задача: Сформировать устойчивые навыки создания одностраничных приложений (SPA) на одном из ведущих фреймворков (React/Vue/Angular), включая работу с состоянием приложения, маршрутизацией и взаимодействием с backend API.
 
+## 3. Перечень знаний, умений и навыков, приобретаемых при изучении курса:
 
-The release also discontinues certain components and exports, such as **Steps**, **Callout**, **Tabs**, **Tab**, **Cards**  and 'FileTree', which are now available from 'nextra/components'. 
+### Знания:
 
-<LinkButton text="Star this template on GitHub" link="https://github.com/ShrihariMohan/nextra-v3-docs-template" target="_blank" icon={<Github className="w-5 h-5" />}/>
+* Принципов компонентного подхода и его преимуществ.
 
+* Жизненного цикла компонента и управления состоянием (State Management).
 
-```json copy  filename="package.json"
-{
-  "name": "nextra-v3-template",
-  "version": "0.1.0",
-  "description": "Nextra v3 Template with configs and folders using app router",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "lucide-react": "^0.469.0",
-    "next": "^15.1.3",
-    "nextra": "^3.3.1",
-    "nextra-theme-docs": "^3.3.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "sass": "^1.83.0",
-    "sharp": "^0.33.5"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.1.3",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
-  }
-}
+* Основ архитектуры одностраничных приложений (SPA) и клиентской маршрутизации.
 
-```
+### Умения:
+
+* Разрабатывать переиспользуемые UI-компоненты.
+
+* Организовывать взаимодействие компонентов и управлять состоянием приложения на уровне всего приложения (например, с помощью Redux или Vuex).
+
+* Интегрировать приложение с внешним сервером через REST API.
+
+### Навыки:
+
+* Навык отладки и тестирования кода на JS-фреймворке.
+
+* Навык работы с системой сборки проекта (например, Vite или Create React App) и инструментами разработчика (DevTools).
+
+* Навык чтения документации фреймворка и поиска решений для типовых задач.
+
+## 4. Основные результаты деятельности обучения по данному курсу:
+Главный результат: Создание завершенного индивидуального или группового учебного проекта — функционального одностраничного приложения (например, "Интернет-магазин", "Персональный блог", "Задачник") с использованием выбранного JS-фреймворка, демонстрирующего усвоение ключевых тем курса.
+
+## 5. Основные дидактические единицы (разделы курса) с указанием объема в академических часах:
+
+| №             | Наименование раздела                                                |   Всего часов |   Лекции     |  Практика     |
+| :------------ | :---------:                                                         | :----------:  | :----------: |  ----------:  |
+| 1             |    Введение в экосистему JS-фреймворков. Основы React.              | 36            |        16    |        22     |
+| 2             |    Управление состоянием и продвинутые техники в React-приложениях. | 36            |        14    |    22         |

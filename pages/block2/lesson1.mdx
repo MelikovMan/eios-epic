@@ -1,0 +1,780 @@
+# Паттерн пользовательских хуков (Custom Hooks)
+
+
+## 1. Введение в пользовательские хуки
+### 1.1. Что такое пользовательские хуки?
+Пользовательские хуки — это JavaScript-функции, которые начинаются с префикса use и могут вызывать другие хуки. Они позволяют переиспользовать stateful-логику между компонентами.
+
+```jsx
+// ❌ ДУБЛИРОВАНИЕ: Одна и та же логика в разных компонентах
+function ComponentA() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/data')
+      .then(response => response.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return /* ... */;
+}
+
+function ComponentB() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/other-data')
+      .then(response => response.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return /* ... */;
+}
+
+// ✅ РЕШЕНИЕ: Пользовательский хук useApi
+function useApi(url) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch(url)
+      .then(response => response.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// Использование в компонентах
+function ComponentA() {
+  const { data, loading, error } = useApi('/api/data');
+  return /* ... */;
+}
+
+function ComponentB() {
+  const { data, loading, error } = useApi('/api/other-data');
+  return /* ... */;
+}
+```
+### 1.2. Преимущества пользовательских хуков
+Переиспользование логики без дублирования кода
+
+Чистота компонентов - логика выносится в отдельные функции
+
+Легкость тестирования - хуки можно тестировать изолированно
+
+Композиция - хуки можно комбинировать друг с другом
+
+Стандартизация - единый подход к решению типовых задач
+
+## 2. Правила создания пользовательских хуков
+### 2.1. Основные правила
+Имя начинается с use - это соглашение, которое позволяет React проверять нарушения правил хуков
+
+Могут вызывать другие хуки - useState, useEffect, useContext и другие
+
+Должны следовать правилам хуков - вызываться только на верхнем уровне
+
+Возвращают значения - данные, функции или то и другое
+
+### 2.2. Структура пользовательского хука
+```jsx
+function useCustomHook(initialValue) {
+  // 1. Объявление состояния
+  const [state, setState] = useState(initialValue);
+  
+  // 2. Побочные эффекты
+  useEffect(() => {
+    // Логика эффекта
+    return () => {
+      // Очистка
+    };
+  }, [/* зависимости */]);
+  
+  // 3. Вспомогательные функции
+  const updateState = useCallback((newValue) => {
+    setState(newValue);
+  }, []);
+  
+  // 4. Возвращаемое значение
+  return {
+    state,
+    updateState,
+    // другие значения и функции
+  };
+}
+```
+## 3. Практические примеры пользовательских хуков
+### 3.1. Хук для работы с локальным хранилищем
+```jsx
+import { useState, useEffect, useCallback } from 'react';
+
+function useLocalStorage(key, initialValue) {
+  // Функция для получения значения из localStorage
+  const getStoredValue = useCallback(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error);
+      return initialValue;
+    }
+  }, [key, initialValue]);
+
+  // Состояние для хранения значения
+  const [storedValue, setStoredValue] = useState(getStoredValue);
+
+  // Функция для обновления значения
+  const setValue = useCallback((value) => {
+    try {
+      // Allow value to be a function so we have the same API as useState
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      
+      setStoredValue(valueToStore);
+      
+      // Save to localStorage
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
+
+  // Обновляем состояние при изменении ключа
+  useEffect(() => {
+    setStoredValue(getStoredValue());
+  }, [key, getStoredValue]);
+
+  // Слушаем изменения в других вкладках
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === key && event.newValue !== JSON.stringify(storedValue)) {
+        setStoredValue(getStoredValue());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [key, storedValue, getStoredValue]);
+
+  return [storedValue, setValue];
+}
+
+// Использование
+function SettingsComponent() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light');
+  const [language, setLanguage] = useLocalStorage('language', 'ru');
+
+  return (
+    <div>
+      <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+        <option value="light">Светлая</option>
+        <option value="dark">Темная</option>
+      </select>
+      
+      <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+        <option value="ru">Русский</option>
+        <option value="en">Английский</option>
+      </select>
+    </div>
+  );
+}
+```
+3.2. Хук для отслеживания размера окна
+```jsx
+import { useState, useEffect } from 'react';
+
+function useWindowSize() {
+  const [windowSize, setWindowSize] = useState({
+    width: undefined,
+    height: undefined,
+  });
+
+  useEffect(() => {
+    // Обработчик изменения размера окна
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+    
+    // Устанавливаем начальные значения
+    handleResize();
+    
+    // Добавляем слушатель события
+    window.addEventListener('resize', handleResize);
+    
+    // Убираем слушатель при размонтировании
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // Пустой массив зависимостей = эффект только при монтировании/размонтировании
+
+  return windowSize;
+}
+
+// Дополнительные вычисляемые значения
+function useResponsive() {
+  const { width } = useWindowSize();
+  
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+  const isDesktop = width >= 1024;
+  
+  return {
+    width,
+    isMobile,
+    isTablet,
+    isDesktop,
+    breakpoint: isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop'
+  };
+}
+
+// Использование
+function ResponsiveComponent() {
+  const { isMobile, isTablet, isDesktop, breakpoint } = useResponsive();
+  
+  return (
+    <div>
+      <p>Текущий breakpoint: {breakpoint}</p>
+      {isMobile && <MobileView />}
+      {isTablet && <TableView />}
+      {isDesktop && <DesktopView />}
+    </div>
+  );
+}
+```
+### 3.3. Хук для управления состоянием формы
+```jsx
+import { useState, useCallback } from 'react';
+
+function useForm(initialState = {}, validateFn = null) {
+  const [values, setValues] = useState(initialState);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Универсальный обработчик изменений
+  const handleChange = useCallback((event) => {
+    const { name, value, type, checked } = event.target;
+    
+    setValues(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+
+    // Отмечаем поле как "тронутое"
+    setTouched(prev => ({
+      ...prev,
+      [name]: true
+    }));
+
+    // Очищаем ошибку при изменении
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  }, [errors]);
+
+  // Установка значения программно
+  const setValue = useCallback((name, value) => {
+    setValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+
+  // Обработчик "потери фокуса"
+  const handleBlur = useCallback((event) => {
+    const { name } = event.target;
+    
+    setTouched(prev => ({
+      ...prev,
+      [name]: true
+    }));
+
+    // Валидация на blur
+    if (validateFn) {
+      const newErrors = validateFn(values);
+      setErrors(newErrors);
+    }
+  }, [values, validateFn]);
+
+  // Валидация всей формы
+  const validateForm = useCallback(() => {
+    if (validateFn) {
+      const newErrors = validateFn(values);
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }
+    return true;
+  }, [values, validateFn]);
+
+  // Сброс формы
+  const resetForm = useCallback(() => {
+    setValues(initialState);
+    setErrors({});
+    setTouched({});
+    setIsSubmitting(false);
+  }, [initialState]);
+
+  // Отправка формы
+  const handleSubmit = useCallback((onSubmit) => async (event) => {
+    event.preventDefault();
+    
+    setIsSubmitting(true);
+    
+    // Валидация перед отправкой
+    const isValid = validateForm();
+    
+    if (isValid) {
+      try {
+        await onSubmit(values);
+      } catch (error) {
+        console.error('Form submission error:', error);
+      }
+    }
+    
+    setIsSubmitting(false);
+  }, [values, validateForm]);
+
+  return {
+    values,
+    errors,
+    touched,
+    isSubmitting,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setValue,
+    resetForm,
+    validateForm,
+    // Вычисляемые свойства
+    isValid: Object.keys(errors).length === 0,
+    isDirty: JSON.stringify(values) !== JSON.stringify(initialState)
+  };
+}
+
+// Использование
+function RegistrationForm() {
+  const {
+    values,
+    errors,
+    touched,
+    isSubmitting,
+    handleChange,
+    handleBlur,
+    handleSubmit
+  } = useForm({
+    username: '',
+    email: '',
+    password: ''
+  }, validateRegistration);
+
+  const onSubmit = async (formData) => {
+    // Отправка данных на сервер
+    console.log('Submitting:', formData);
+    await fetch('/api/register', {
+      method: 'POST',
+      body: JSON.stringify(formData)
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <input
+          name="username"
+          value={values.username}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Имя пользователя"
+        />
+        {touched.username && errors.username && (
+          <span className="error">{errors.username}</span>
+        )}
+      </div>
+      
+      <div>
+        <input
+          name="email"
+          type="email"
+          value={values.email}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Email"
+        />
+        {touched.email && errors.email && (
+          <span className="error">{errors.email}</span>
+        )}
+      </div>
+      
+      <div>
+        <input
+          name="password"
+          type="password"
+          value={values.password}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Пароль"
+        />
+        {touched.password && errors.password && (
+          <span className="error">{errors.password}</span>
+        )}
+      </div>
+      
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
+      </button>
+    </form>
+  );
+}
+
+// Функция валидации
+function validateRegistration(values) {
+  const errors = {};
+  
+  if (!values.username.trim()) {
+    errors.username = 'Имя пользователя обязательно';
+  } else if (values.username.length < 3) {
+    errors.username = 'Имя должно быть не менее 3 символов';
+  }
+  
+  if (!values.email.trim()) {
+    errors.email = 'Email обязателен';
+  } else if (!/\S+@\S+\.\S+/.test(values.email)) {
+    errors.email = 'Email некорректен';
+  }
+  
+  if (!values.password) {
+    errors.password = 'Пароль обязателен';
+  } else if (values.password.length < 6) {
+    errors.password = 'Пароль должен быть не менее 6 символов';
+  }
+  
+  return errors;
+}
+```
+### 3.4. Хук для работы с API
+```jsx
+import { useState, useEffect, useCallback } from 'react';
+
+function useApi(url, options = {}) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const {
+    autoFetch = true,
+    method = 'GET',
+    body = null,
+    headers = {},
+    onSuccess = null,
+    onError = null
+  } = options;
+
+  const fetchData = useCallback(async (fetchUrl = url, fetchOptions = {}) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const config = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+          ...fetchOptions.headers
+        },
+        ...(body && { body: JSON.stringify(body) }),
+        ...fetchOptions
+      };
+
+      const response = await fetch(fetchUrl, config);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setData(result);
+      
+      if (onSuccess) {
+        onSuccess(result);
+      }
+      
+      return result;
+    } catch (err) {
+      const errorObj = {
+        message: err.message,
+        status: err.status
+      };
+      
+      setError(errorObj);
+      
+      if (onError) {
+        onError(errorObj);
+      }
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [url, method, body, headers, onSuccess, onError]);
+
+  const post = useCallback((postData) => {
+    return fetchData(url, {
+      method: 'POST',
+      body: JSON.stringify(postData)
+    });
+  }, [fetchData, url]);
+
+  const put = useCallback((putData) => {
+    return fetchData(url, {
+      method: 'PUT',
+      body: JSON.stringify(putData)
+    });
+  }, [fetchData, url]);
+
+  const del = useCallback(() => {
+    return fetchData(url, {
+      method: 'DELETE'
+    });
+  }, [fetchData, url]);
+
+  // Автоматический fetch при монтировании
+  useEffect(() => {
+    if (autoFetch) {
+      fetchData();
+    }
+  }, [autoFetch, fetchData]);
+
+  return {
+    data,
+    loading,
+    error,
+    fetchData,
+    post,
+    put,
+    delete: del,
+    refetch: () => fetchData(),
+    // Состояния для удобства
+    isSuccess: !loading && !error && data !== null,
+    isError: !loading && error !== null,
+    isEmpty: !loading && !error && data === null
+  };
+}
+
+// Использование
+function UserProfile({ userId }) {
+  const { data: user, loading, error, refetch } = useApi(
+    `/api/users/${userId}`,
+    {
+      onSuccess: (userData) => {
+        console.log('User data loaded:', userData);
+      },
+      onError: (error) => {
+        console.error('Failed to load user:', error);
+      }
+    }
+  );
+
+  if (loading) return <div>Загрузка...</div>;
+  if (error) return <div>Ошибка: {error.message}</div>;
+  if (!user) return <div>Пользователь не найден</div>;
+
+  return (
+    <div>
+      <h2>{user.name}</h2>
+      <p>Email: {user.email}</p>
+      <button onClick={refetch}>Обновить</button>
+    </div>
+  );
+}
+```
+## 4. Композиция пользовательских хуков
+### 4.1. Создание сложных хуков из простых
+```jsx
+// Базовые хуки
+function useLocalStorage(key, initialValue) { /* ... */ }
+function useApi(url, options) { /* ... */ }
+function useAuth() { /* ... */ }
+
+// Составной хук
+function useUserProfile(userId) {
+  const { user, updateUser } = useAuth();
+  const { data: profile, loading, error, updateProfile } = useApi(`/api/users/${userId}`);
+  const [preferences, setPreferences] = useLocalStorage('user-preferences', {});
+  
+  const isCurrentUser = user?.id === userId;
+  
+  const updatePreferences = useCallback((newPreferences) => {
+    setPreferences(prev => ({ ...prev, ...newPreferences }));
+  }, [setPreferences]);
+  
+  return {
+    profile,
+    loading,
+    error,
+    preferences,
+    isCurrentUser,
+    updateProfile,
+    updatePreferences
+  };
+}
+```
+### 4.2. Хук для управления модальными окнами
+```jsx
+import { useState, useCallback } from 'react';
+
+function useModal(initialState = false) {
+  const [isOpen, setIsOpen] = useState(initialState);
+  const [modalData, setModalData] = useState(null);
+
+  const open = useCallback((data = null) => {
+    setIsOpen(true);
+    setModalData(data);
+  }, []);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setModalData(null);
+  }, []);
+
+  const toggle = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+
+  return {
+    isOpen,
+    modalData,
+    open,
+    close,
+    toggle
+  };
+}
+
+// Композиция нескольких модальных окон
+function useModals() {
+  const loginModal = useModal();
+  const registerModal = useModal();
+  const settingsModal = useModal();
+
+  // Закрыть все модальные окна
+  const closeAll = useCallback(() => {
+    loginModal.close();
+    registerModal.close();
+    settingsModal.close();
+  }, [loginModal, registerModal, settingsModal]);
+
+  return {
+    loginModal,
+    registerModal,
+    settingsModal,
+    closeAll
+  };
+}
+
+// Использование
+function Navigation() {
+  const { loginModal, registerModal, closeAll } = useModals();
+
+  return (
+    <nav>
+      <button onClick={loginModal.open}>Войти</button>
+      <button onClick={registerModal.open}>Регистрация</button>
+      
+      {loginModal.isOpen && (
+        <LoginModal 
+          isOpen={loginModal.isOpen}
+          onClose={loginModal.close}
+        />
+      )}
+      
+      {registerModal.isOpen && (
+        <RegisterModal 
+          isOpen={registerModal.isOpen}
+          onClose={registerModal.close}
+        />
+      )}
+    </nav>
+  );
+}
+```
+
+## 6. Лучшие практики
+### 6.1. Правила именования
+```jsx
+// ✅ ХОРОШО
+function useLocalStorage() { }
+function useApi() { }
+function useForm() { }
+
+// ❌ ПЛОХО
+function getLocalStorage() { }
+function apiHook() { }
+function formManager() { }
+```
+### 6.2. Оптимизация производительности
+```jsx
+function useOptimizedHook(dependencies) {
+  // Используем useMemo для тяжелых вычислений
+  const computedValue = useMemo(() => {
+    return expensiveCalculation(dependencies);
+  }, [dependencies]);
+  
+  // Используем useCallback для функций
+  const memoizedCallback = useCallback(() => {
+    // логика
+  }, [dependencies]);
+  
+  return { computedValue, memoizedCallback };
+}
+```
+### 6.3. Обработка ошибок
+```jsx
+function useSafeHook() {
+  const [state, setState] = useState(null);
+  const [error, setError] = useState(null);
+  
+  useEffect(() => {
+    try {
+      // Логика хука
+    } catch (err) {
+      setError(err);
+      console.error('Hook error:', err);
+    }
+  }, []);
+  
+  return { state, error };
+}
+```
+
+
+## Выводы
+Пользовательские хуки позволяют переиспользовать логику между компонентами
+
+Имена хуков должны начинаться с use
+
+Хуки могут вызывать другие хуки - useState, useEffect, useContext
+
+Композиция хуков позволяет создавать сложную логику из простых частей
+
+Тестирование хуков осуществляется с помощью renderHook из Testing Library
+
+Оптимизация важна для предотвращения лишних перерисовок
+
+## Дополнительные материалы
+1. [React Docs - Пользовательские хуки](https://react.dev/learn/reusing-logic-with-custom-hooks)
+
+2. [useHooks.com - коллекция полезных пользовательских хуков](https://usehooks.com/)

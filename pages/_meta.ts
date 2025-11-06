@@ -1,12 +1,13 @@
 const page = {
-  index: 'Introduction',
-  anotherPage : 'Another Page',
-  fruits: "Fruits",
-  GitHub: {
-    title: 'GitHub',
-    type: 'page',
-    href: 'https://github.com/ShrihariMohan/nextra-v3-docs-template',
-    newWindow: true
+  index: 'Введение в курс',
+  anotherPage : 'Список литературы',
+  block1: "Блок 1. Введение в экосистему JS-фреймворков. Основы React. ",
+  block2: "Блок 2. Управление состоянием и продвинутые техники в React-приложениях. ",
+  FinalTest: {
+    title: "Итоговое тестирование.",
+    type: "page",
+    href: 'https://wingkwong.github.io/react-quiz-component/',
+    newWindow: true,
   }
 }
 

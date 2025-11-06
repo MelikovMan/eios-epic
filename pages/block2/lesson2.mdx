@@ -1,0 +1,876 @@
+# React Suspense, React Error Boundaries.
+
+1. Введение в React Suspense
+1.1. Что такое Suspense?
+React Suspense — это механизм, который позволяет компонентам «ждать» чего-либо перед рендерингом. Изначально создан для работы с ленивой загрузкой компонентов, но теперь также используется для загрузки данных.
+
+1.2. Проблемы, которые решает Suspense
+До Suspense:
+
+```jsx
+// ❌ СЛОЖНЫЙ ПОДХОД: Ручное управление состоянием загрузки
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchUser(userId)
+      .then(setUser)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorDisplay error={error} />;
+  return <UserDetails user={user} />;
+}
+```
+Проблемы:
+ - Бойлерплейт код для каждого компонента
+ - Сложность композиции нескольких загрузок
+ - Race conditions
+ - Сложность управления приоритетами загрузки
+С Suspense:
+
+```jsx
+// ✅ ПРОСТОЙ ПОДХОД: Декларативная загрузка
+function UserProfile({ userId }) {
+  const user = userResource.read(userId); // Может "подвесить" рендеринг
+  
+  return <UserDetails user={user} />;
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingSpinner />}>
+        <UserProfile userId={1} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+## 2. Suspense для ленивой загрузки компонентов
+### 2.1. Базовое использование с React.lazy
+
+```jsx
+import { Suspense, lazy } from 'react';
+
+// Ленивая загрузка компонента
+const LazyComponent = lazy(() => import('./HeavyComponent'));
+
+function App() {
+  const [showHeavy, setShowHeavy] = useState(false);
+  
+  return (
+    <div>
+      <button onClick={() => setShowHeavy(true)}>
+        Показать тяжелый компонент
+      </button>
+      
+      {/* Suspense показывает fallback пока компонент загружается */}
+      <Suspense fallback={<div>Загрузка компонента...</div>}>
+        {showHeavy && <LazyComponent />}
+      </Suspense>
+    </div>
+  );
+}
+```
+### 2.2. Практические примеры ленивой загрузки
+Пример 1: Ленивая загрузка маршрутов
+
+```jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+
+// Ленивая загрузка страниц
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+
+// Компонент загрузки
+function LoadingFallback() {
+  return (
+    <div className="loading-container">
+      <div className="spinner"></div>
+      <p>Загрузка...</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="app">
+        {/* Общий Suspense для всего приложения */}
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </Router>
+  );
+}
+```
+Пример 2: Вложенные Suspense
+
+```jsx
+const Header = lazy(() => import('./components/Header'));
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const MainContent = lazy(() => import('./components/MainContent'));
+const Chart = lazy(() => import('./components/Chart'));
+const DataTable = lazy(() => import('./components/DataTable'));
+
+function Dashboard() {
+  return (
+    <div className="dashboard">
+      {/* Каждый компонент может загружаться независимо */}
+      <Suspense fallback={<HeaderPlaceholder />}>
+        <Header />
+      </Suspense>
+      
+      <div className="dashboard-content">
+        <Suspense fallback={<SidebarPlaceholder />}>
+          <Sidebar />
+        </Suspense>
+        
+        <div className="main-area">
+          <Suspense fallback={<MainContentPlaceholder />}>
+            <MainContent>
+              {/* Вложенные Suspense для более точного контроля */}
+              <Suspense fallback={<ChartPlaceholder />}>
+                <Chart />
+              </Suspense>
+              
+              <Suspense fallback={<TablePlaceholder />}>
+                <DataTable />
+              </Suspense>
+            </MainContent>
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Компоненты-заглушки
+function HeaderPlaceholder() {
+  return <div className="header placeholder">Загрузка шапки...</div>;
+}
+
+function SidebarPlaceholder() {
+  return <div className="sidebar placeholder">Загрузка меню...</div>;
+}
+
+// ... остальные заглушки
+```
+### 2.3. Продвинутые техники ленивой загрузки
+Предзагрузка компонентов:
+
+```jsx
+import { lazy } from 'react';
+
+// Создаем ленивые компоненты
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
+const Modal = lazy(() => import('./Modal'));
+
+// Функция для предзагрузки
+const preloadComponent = (component) => {
+  component.preload?.();
+};
+
+// Кастомный хук для управления предзагрузкой
+function usePreload() {
+  const preloaded = useRef(new Set());
+  
+  const preload = useCallback((component) => {
+    if (!preloaded.current.has(component)) {
+      preloaded.current.add(component);
+      // Запускаем импорт, но не используем результат
+      import('./HeavyComponent');
+    }
+  }, []);
+  
+  return { preload };
+}
+
+function App() {
+  const [showHeavy, setShowHeavy] = useState(false);
+  const { preload } = usePreload();
+  
+  // Предзагружаем компонент при наведении
+  const handleMouseEnter = () => {
+    preload(HeavyComponent);
+  };
+  
+  return (
+    <div>
+      <button 
+        onClick={() => setShowHeavy(true)}
+        onMouseEnter={handleMouseEnter}
+      >
+        Показать тяжелый компонент
+      </button>
+      
+      <Suspense fallback={<div>Загрузка...</div>}>
+        {showHeavy && <HeavyComponent />}
+      </Suspense>
+    </div>
+  );
+}
+```
+## 3. Suspense для загрузки данных
+### 3.1. Концепция ресурсов для Suspense
+Для использования Suspense с данными нужны «ресурсы» — объекты, которые могут «подвешивать» рендеринг.
+
+```jsx
+// Создаем ресурс для работы с Suspense
+function createResource(promise) {
+  let status = 'pending';
+  let result;
+  
+  // Запускаем промис и отслеживаем состояние
+  const suspender = promise.then(
+    (data) => {
+      status = 'success';
+      result = data;
+    },
+    (error) => {
+      status = 'error';
+      result = error;
+    }
+  );
+  
+  return {
+    read() {
+      if (status === 'pending') {
+        // "Подвешиваем" рендеринг, бросая промис
+        throw suspender;
+      } else if (status === 'error') {
+        // Бросаем ошибку для Error Boundary
+        throw result;
+      } else if (status === 'success') {
+        // Возвращаем данные
+        return result;
+      }
+    }
+  };
+}
+
+// Хук для создания ресурса
+function useResource(promiseFactory, deps = []) {
+  const [resource, setResource] = useState(null);
+  
+  useEffect(() => {
+    const newResource = createResource(promiseFactory());
+    setResource(newResource);
+  }, deps);
+  
+  return resource;
+}
+```
+### 3.2. Практические примеры с загрузкой данных
+Пример 1: Простая загрузка пользователя
+
+```jsx
+// Ресурс для пользователя
+const userResource = createResource(
+  fetch('/api/users/1').then(res => res.json())
+);
+
+function UserProfile() {
+  // Эта строка может "подвесить" компонент
+  const user = userResource.read();
+  
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<div>Загрузка пользователя...</div>}>
+        <UserProfile />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+Пример 2: Кастомный хук для данных с Suspense
+
+```jsx
+import { useCallback, useRef } from 'react';
+
+// Кэш ресурсов
+const resourceCache = new Map();
+
+function useSuspenseFetch(url, options = {}) {
+  const { 
+    key = url,
+    headers = {},
+    transform = data => data 
+  } = options;
+  
+  // Используем useRef для сохранения ресурса между рендерами
+  const resourceRef = useRef();
+  
+  if (!resourceRef.current) {
+    if (resourceCache.has(key)) {
+      resourceRef.current = resourceCache.get(key);
+    } else {
+      const promise = fetch(url, { headers })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(transform);
+      
+      const resource = createResource(promise);
+      resourceCache.set(key, resource);
+      resourceRef.current = resource;
+    }
+  }
+  
+  return resourceRef.current.read();
+}
+
+// Компонент, использующий Suspense для данных
+function UserDetails({ userId }) {
+  const user = useSuspenseFetch(`/api/users/${userId}`, {
+    key: `user-${userId}`,
+    transform: (user) => ({
+      ...user,
+      fullName: `${user.firstName} ${user.lastName}`
+    })
+  });
+  
+  const posts = useSuspenseFetch(`/api/users/${userId}/posts`, {
+    key: `user-posts-${userId}`
+  });
+  
+  return (
+    <div>
+      <h1>{user.fullName}</h1>
+      <div>
+        <h2>Посты:</h2>
+        {posts.map(post => (
+          <div key={post.id}>
+            <h3>{post.title}</h3>
+            <p>{post.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="skeleton-loader">
+          <div className="skeleton-header"></div>
+          <div className="skeleton-content"></div>
+        </div>
+      }>
+        <UserDetails userId={1} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+### 3.3. Параллельная загрузка данных
+```jsx
+// Хук для параллельной загрузки нескольких ресурсов
+function useSuspenseAll(resources) {
+  return resources.map(resource => resource.read());
+}
+
+function UserDashboard({ userId }) {
+  // Все ресурсы загружаются параллельно
+  const [user, posts, notifications, settings] = useSuspenseAll([
+    useSuspenseFetch(`/api/users/${userId}`),
+    useSuspenseFetch(`/api/users/${userId}/posts`),
+    useSuspenseFetch(`/api/users/${userId}/notifications`),
+    useSuspenseFetch(`/api/users/${userId}/settings`)
+  ]);
+  
+  return (
+    <div className="dashboard">
+      <UserHeader user={user} />
+      <div className="dashboard-content">
+        <PostsList posts={posts} />
+        <NotificationsList notifications={notifications} />
+        <SettingsPanel settings={settings} />
+      </div>
+    </div>
+  );
+}
+```
+## 4. Error Boundaries и обработка ошибок
+### 4.1. Создание Error Boundary
+```jsx
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
+  }
+  
+  static getDerivedStateFromError(error) {
+    // Обновляем состояние для отображения fallback UI
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    // Можно отправить ошибку в сервис мониторинга
+    console.error('Error caught by boundary:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+  
+  resetError = () => {
+    this.setState({ 
+      hasError: false, 
+      error: null, 
+      errorInfo: null 
+    });
+  };
+  
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <h2>Что-то пошло не так.</h2>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo?.componentStack}
+          </details>
+          <button onClick={this.resetError}>
+            Попробовать снова
+          </button>
+        </div>
+      );
+    }
+    
+    return this.props.children;
+  }
+}
+```
+### 4.2. Гранулярные Error Boundaries
+```jsx
+// Специализированные Error Boundaries
+function DataErrorBoundary({ children, fallback }) {
+  const [hasError, setHasError] = useState(false);
+  
+  const resetError = useCallback(() => {
+    setHasError(false);
+  }, []);
+  
+  if (hasError) {
+    return fallback || <div>Ошибка загрузки данных</div>;
+  }
+  
+  return (
+    <ErrorBoundary 
+      onError={() => setHasError(true)}
+      resetKey={resetKey}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+// Использование с гранулярным контролем
+function App() {
+  return (
+    <div>
+      {/* Глобальный Error Boundary */}
+      <ErrorBoundary>
+        
+        {/* Header загружается независимо */}
+        <Suspense fallback={<HeaderSkeleton />}>
+          <Header />
+        </Suspense>
+        
+        <main>
+          {/* Основной контент с собственным Error Boundary */}
+          <DataErrorBoundary 
+            fallback={
+              <div>
+                <p>Не удалось загрузить основной контент</p>
+                <button onClick={() => window.location.reload()}>
+                  Обновить страницу
+                </button>
+              </div>
+            }
+          >
+            <Suspense fallback={<MainContentSkeleton />}>
+              <MainContent />
+            </Suspense>
+          </DataErrorBoundary>
+          
+          {/* Сайдбар с собственным Error Boundary */}
+          <DataErrorBoundary fallback={<SidebarError />}>
+            <Suspense fallback={<SidebarSkeleton />}>
+              <Sidebar />
+            </Suspense>
+          </DataErrorBoundary>
+        </main>
+        
+      </ErrorBoundary>
+    </div>
+  );
+}
+```
+## 5. Продвинутые паттерны Suspense
+### 5.1. Прерываемая загрузка с startTransition
+```jsx
+import { Suspense, startTransition, useState } from 'react';
+
+const ProfilePage = lazy(() => import('./ProfilePage'));
+const SettingsPage = lazy(() => import('./SettingsPage'));
+
+function App() {
+  const [tab, setTab] = useState('profile');
+  const [isPending, startTransition] = useTransition();
+  
+  function selectTab(nextTab) {
+    startTransition(() => {
+      setTab(nextTab);
+    });
+  }
+  
+  return (
+    <div>
+      <nav>
+        <button 
+          onClick={() => selectTab('profile')}
+          className={tab === 'profile' ? 'active' : ''}
+        >
+          Профиль {isPending && ' (загрузка...)'}
+        </button>
+        <button 
+          onClick={() => selectTab('settings')}
+          className={tab === 'settings' ? 'active' : ''}
+        >
+          Настройки {isPending && ' (загрузка...)'}
+        </button>
+      </nav>
+      
+      <Suspense fallback={<PageSkeleton />}>
+        {tab === 'profile' && <ProfilePage />}
+        {tab === 'settings' && <SettingsPage />}
+      </Suspense>
+    </div>
+  );
+}
+```
+### 5.2. Стратегии кэширования данных
+```jsx
+// Продвинутый кэш для Suspense ресурсов
+class SuspenseCache {
+  constructor() {
+    this.cache = new Map();
+    this.prefetchQueue = new Map();
+  }
+  
+  get(key) {
+    return this.cache.get(key);
+  }
+  
+  set(key, resource) {
+    this.cache.set(key, resource);
+  }
+  
+  has(key) {
+    return this.cache.has(key);
+  }
+  
+  // Предзагрузка данных
+  prefetch(key, promiseFactory) {
+    if (!this.has(key) && !this.prefetchQueue.has(key)) {
+      const resource = createResource(promiseFactory());
+      this.prefetchQueue.set(key, resource);
+      
+      // Добавляем в кэш после успешной загрузки
+      resource.read().then(() => {
+        this.set(key, resource);
+        this.prefetchQueue.delete(key);
+      });
+    }
+  }
+  
+  // Инвалидация кэша
+  invalidate(key) {
+    this.cache.delete(key);
+  }
+  
+  // Очистка всего кэша
+  clear() {
+    this.cache.clear();
+  }
+}
+
+// Глобальный экземпляр кэша
+const globalCache = new SuspenseCache();
+
+// Хук для работы с кэшем
+function useSuspenseCache(key, promiseFactory, options = {}) {
+  const { 
+    ttl = 5 * 60 * 1000, // 5 минут
+    prefetch = false 
+  } = options;
+  
+  const [resource, setResource] = useState(() => {
+    if (globalCache.has(key)) {
+      return globalCache.get(key);
+    }
+    
+    const newResource = createResource(promiseFactory());
+    globalCache.set(key, newResource);
+    
+    // Настраиваем TTL
+    if (ttl > 0) {
+      setTimeout(() => {
+        globalCache.invalidate(key);
+      }, ttl);
+    }
+    
+    return newResource;
+  });
+  
+  // Предзагрузка
+  useEffect(() => {
+    if (prefetch && !globalCache.has(key)) {
+      globalCache.prefetch(key, promiseFactory);
+    }
+  }, [key, prefetch, promiseFactory]);
+  
+  return resource.read();
+}
+```
+### 5.3. Скелетоны и прогрессивная загрузка
+```jsx
+// Адаптивные скелетоны
+function SkeletonLoader({ type = 'text', lines = 3, width = '100%' }) {
+  return (
+    <div className={`skeleton skeleton--${type}`} style={{ width }}>
+      {type === 'text' && Array.from({ length: lines }, (_, i) => (
+        <div key={i} className="skeleton-line" />
+      ))}
+      {type === 'card' && (
+        <>
+          <div className="skeleton-image" />
+          <div className="skeleton-content">
+            <div className="skeleton-title" />
+            <div className="skeleton-text" />
+            <div className="skeleton-text" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Компонент с прогрессивной загрузкой
+function ProgressiveUserProfile({ userId }) {
+  const user = useSuspenseFetch(`/api/users/${userId}`);
+  
+  return (
+    <div className="user-profile">
+      <img 
+        src={user.avatar} 
+        alt={user.name}
+        loading="lazy"
+      />
+      <div className="user-info">
+        <h1>{user.name}</h1>
+        <p className="user-bio">{user.bio}</p>
+        <div className="user-stats">
+          <StatItem label="Посты" value={user.postsCount} />
+          <StatItem label="Подписчики" value={user.followersCount} />
+          <StatItem label="Подписки" value={user.followingCount} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserProfileWithSuspense({ userId }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="user-profile-skeleton">
+          <SkeletonLoader type="card" />
+        </div>
+      }>
+        <ProgressiveUserProfile userId={userId} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+## 6. Интеграция с популярными библиотеками
+### 6.1. React Query с Suspense
+```jsx
+import { useQuery } from '@tanstack/react-query';
+import { Suspense } from 'react';
+
+// React Query автоматически поддерживает Suspense
+function UserProfile({ userId }) {
+  const { data: user } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchUser(userId),
+    suspense: true, // Включаем поддержку Suspense
+  });
+  
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<div>Загрузка пользователя...</div>}>
+        <UserProfile userId={1} />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+### 6.2. SWR с Suspense
+```jsx
+import useSWR from 'swr';
+import { Suspense } from 'react';
+
+function UserProfile({ userId }) {
+  const { data: user } = useSWR(
+    `/api/users/${userId}`,
+    { suspense: true } // Включаем Suspense режим
+  );
+  
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+```
+## 7. Лучшие практики и антипаттерны
+### 7.1. Лучшие практики
+```jsx
+// ✅ ХОРОШО: Гранулярные Suspense
+function GoodExample() {
+  return (
+    <div>
+      <Suspense fallback={<HeaderSkeleton />}>
+        <Header />
+      </Suspense>
+      
+      <main>
+        <Suspense fallback={<ContentSkeleton />}>
+          <Content />
+        </Suspense>
+        
+        <Suspense fallback={<SidebarSkeleton />}>
+          <Sidebar />
+        </Suspense>
+      </main>
+    </div>
+  );
+}
+
+// ✅ ХОРОШО: Использование Error Boundaries
+function GoodExampleWithErrorHandling() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<Loading />}>
+        <ComponentThatMightFail />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+```
+### 7.2. Антипаттерны
+```jsx
+// ❌ ПЛОХО: Слишком большой Suspense
+function BadExample() {
+  return (
+    <Suspense fallback={<MonolithicLoader />}>
+      <Header />
+      <MainContent />
+      <Sidebar />
+      <Footer />
+    </Suspense>
+  );
+}
+
+// ❌ ПЛОХО: Suspense без Error Boundary
+function UnsafeExample() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ComponentThatMightFail />
+    </Suspense>
+  );
+}
+
+// ❌ ПЛОХО: Изменение состояния в render
+function DangerousComponent() {
+  const [data, setData] = useState(null);
+  
+  // НИКОГДА ТАК НЕ ДЕЛАЙТЕ!
+  if (!data) {
+    fetchData().then(setData);
+    throw new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  return <div>{data}</div>;
+}
+```
+
+
+## Выводы
+Suspense — это декларативный способ управления состоянием загрузки
+
+React.lazy позволяет лениво загружать компоненты с Suspense
+
+Error Boundaries необходимы для обработки ошибок в Suspense
+
+Ресурсы — это специальные объекты, которые могут «подвешивать» рендеринг
+
+Гранулярность важна — используйте несколько Suspense boundaries
+
+Скелетоны улучшают пользовательский опыт во время загрузки
+
+Библиотеки как React Query и SWR уже поддерживают Suspense
+
+## Дополнительные материалы
+1. [React Docs - Suspense](https://react.dev/reference/react/Suspense)
+
+2. [React Docs - Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)
+
+3. [React Concurrent Patterns](https://react.dev/blog/2022/03/29/react-v18#what-is-concurrent-react)
+
+Помните: Suspense для загрузки данных все еще считается экспериментальной функцией, но для ленивой загрузки компонентов он готов к использованию в production!

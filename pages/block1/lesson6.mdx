@@ -1,0 +1,812 @@
+# Обработка событий. Контролируемые и неконтролируемые компоненты
+
+## 1. Обработка событий в React
+### 1.1. Основные отличия от нативного DOM
+Нативный DOM:
+
+```html
+<button onclick="handleClick()">Нажми меня</button>
+```
+React:
+
+```jsx
+<button onClick={handleClick}>Нажми меня</button>
+Ключевые отличия:
+```
+
+Синтаксис: camelCase вместо lowercase (onClick vs onclick)
+
+Обработчик: Функция вместо строки
+
+Поведение: По умолчанию preventDefault() не вызывается
+
+Синтетические события: React использует обертку над нативными событиями
+
+## 1.2. Базовые примеры обработки событий
+```jsx
+function BasicEvents() {
+  // Обработчик клика
+  const handleClick = (event) => {
+    console.log('Кнопка нажата!', event);
+    event.preventDefault(); // Предотвращаем поведение по умолчанию
+    event.stopPropagation(); // Останавливаем всплытие
+  };
+  
+  // Обработчик изменения input
+  const handleChange = (event) => {
+    console.log('Значение изменилось:', event.target.value);
+  };
+  
+  // Обработчик отправки формы
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Форма отправлена!');
+  };
+  
+  // Обработчик с параметрами
+  const handleButtonClick = (buttonName, event) => {
+    console.log(`Нажата кнопка: ${buttonName}`, event);
+  };
+  
+  return (
+    <div>
+      {/* Простой обработчик */}
+      <button onClick={handleClick}>Нажми меня</button>
+      
+      {/* Inline обработчик */}
+      <button onClick={() => console.log('Inline обработчик')}>
+        Inline кнопка
+      </button>
+      
+      {/* Обработчик с параметрами */}
+      <button onClick={(e) => handleButtonClick('Сохранить', e)}>
+        Сохранить
+      </button>
+      
+      {/* Форма */}
+      <form onSubmit={handleSubmit}>
+        <input 
+          type="text" 
+          onChange={handleChange}
+          placeholder="Введите текст"
+        />
+        <button type="submit">Отправить</button>
+      </form>
+    </div>
+  );
+}
+```
+### 1.3. Синтетические события React
+React использует SyntheticEvent — кросс-браузерную обертку над нативными событиями.
+
+```jsx
+function SyntheticEventExample() {
+  const handleEvent = (event) => {
+    // Свойства SyntheticEvent
+    console.log('Тип события:', event.type);
+    console.log('Целевой элемент:', event.target);
+    console.log('Текущий элемент:', event.currentTarget);
+    console.log('Координаты:', event.clientX, event.clientY);
+    
+    // Нативное событие
+    console.log('Нативное событие:', event.nativeEvent);
+    
+    // Методы SyntheticEvent
+    event.persist(); // Сохраняем событие для асинхронного использования
+  };
+  
+  return (
+    <div onClick={handleEvent}>
+      <button onClick={handleEvent}>Тест события</button>
+    </div>
+  );
+}
+```
+### 1.4. Практические примеры обработки событий
+Обработка нескольких событий:
+
+```jsx
+function InteractiveComponent() {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Обработчик движения мыши
+  const handleMouseMove = (event) => {
+    if (isDragging) {
+      setPosition({
+        x: event.clientX,
+        y: event.clientY
+      });
+    }
+  };
+  
+  // Обработчик нажатия мыши
+  const handleMouseDown = () => {
+    setIsDragging(true);
+  };
+  
+  // Обработчик отпускания мыши
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  // Обработчик клавиатуры
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      setIsDragging(false);
+    }
+  };
+  
+  return (
+    <div
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onKeyDown={handleKeyDown}
+      tabIndex={0} // Для обработки событий клавиатуры
+      style={{ height: '100vh', cursor: isDragging ? 'grabbing' : 'grab' }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: position.x,
+          top: position.y,
+          width: 100,
+          height: 100,
+          backgroundColor: isDragging ? 'red' : 'blue'
+        }}
+        onMouseDown={handleMouseDown}
+      />
+      <p>Перетащите квадрат. Нажмите Escape для отмены.</p>
+    </div>
+  );
+}
+```
+## 2. Контролируемые компоненты
+### 2.1. Что такое контролируемые компоненты?
+Контролируемый компонент — это компонент, значение которого управляется через state React и обновляется через обработчики событий.
+
+Принцип работы:
+
+Значение хранится в состоянии React
+
+При изменении значения вызывается обработчик
+
+Обработчик обновляет состояние
+
+Компонент перерисовывается с новым значением
+
+```jsx
+function ControlledInput() {
+  const [value, setValue] = useState('');
+  
+  const handleChange = (event) => {
+    setValue(event.target.value);
+  };
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Отправленное значение:', value);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input 
+        type="text" 
+        value={value}           // Значение контролируется React
+        onChange={handleChange} // Обновление через обработчик
+        placeholder="Введите текст"
+      />
+      <button type="submit">Отправить</button>
+      <p>Текущее значение: {value}</p>
+    </form>
+  );
+}
+```
+### 2.2. Контролируемые компоненты формы
+```jsx
+function ControlledForm() {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    rememberMe: false,
+    gender: '',
+    country: '',
+    bio: ''
+  });
+  
+  // Универсальный обработчик изменений
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Данные формы:', formData);
+  };
+  
+  const handleReset = () => {
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      rememberMe: false,
+      gender: '',
+      country: '',
+      bio: ''
+    });
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} onReset={handleReset}>
+      {/* Текстовое поле */}
+      <div>
+        <label htmlFor="username">Имя пользователя:</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          value={formData.username}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      
+      {/* Email поле */}
+      <div>
+        <label htmlFor="email">Email:</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      
+      {/* Пароль */}
+      <div>
+        <label htmlFor="password">Пароль:</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      
+      {/* Checkbox */}
+      <div>
+        <label>
+          <input
+            name="rememberMe"
+            type="checkbox"
+            checked={formData.rememberMe}
+            onChange={handleChange}
+          />
+          Запомнить меня
+        </label>
+      </div>
+      
+      {/* Radio buttons */}
+      <div>
+        <label>Пол:</label>
+        <label>
+          <input
+            name="gender"
+            type="radio"
+            value="male"
+            checked={formData.gender === 'male'}
+            onChange={handleChange}
+          />
+          Мужской
+        </label>
+        <label>
+          <input
+            name="gender"
+            type="radio"
+            value="female"
+            checked={formData.gender === 'female'}
+            onChange={handleChange}
+          />
+          Женский
+        </label>
+      </div>
+      
+      {/* Select */}
+      <div>
+        <label htmlFor="country">Страна:</label>
+        <select
+          id="country"
+          name="country"
+          value={formData.country}
+          onChange={handleChange}
+        >
+          <option value="">Выберите страну</option>
+          <option value="ru">Россия</option>
+          <option value="us">США</option>
+          <option value="de">Германия</option>
+        </select>
+      </div>
+      
+      {/* Textarea */}
+      <div>
+        <label htmlFor="bio">Биография:</label>
+        <textarea
+          id="bio"
+          name="bio"
+          value={formData.bio}
+          onChange={handleChange}
+          rows="4"
+        />
+      </div>
+      
+      <button type="submit">Отправить</button>
+      <button type="reset">Сбросить</button>
+    </form>
+  );
+}
+```
+### 2.3. Преимущества контролируемых компонентов
+Предсказуемость: Полный контроль над данными
+
+Валидация: Легко реализовать валидацию в реальном времени
+
+Тестирование: Просто тестировать логику обработки
+
+Интеграция: Легко интегрировать с другими частями приложения
+
+Пример с валидацией:
+
+```jsx
+function ValidatedForm() {
+  const [formData, setFormData] = useState({ 
+    email: '', 
+    password: '' 
+  });
+  const [errors, setErrors] = useState({});
+  
+  const validateField = (name, value) => {
+    const newErrors = { ...errors };
+    
+    switch (name) {
+      case 'email':
+        if (!value) {
+          newErrors.email = 'Email обязателен';
+        } else if (!/\S+@\S+\.\S+/.test(value)) {
+          newErrors.email = 'Email некорректен';
+        } else {
+          delete newErrors.email;
+        }
+        break;
+        
+      case 'password':
+        if (!value) {
+          newErrors.password = 'Пароль обязателен';
+        } else if (value.length < 6) {
+          newErrors.password = 'Пароль должен быть не менее 6 символов';
+        } else {
+          delete newErrors.password;
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
+  };
+  
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Валидация в реальном времени
+    validateField(name, value);
+  };
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    
+    // Финальная валидация
+    validateField('email', formData.email);
+    validateField('password', formData.password);
+    
+    if (Object.keys(errors).length === 0) {
+      console.log('Форма валидна:', formData);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <input
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Email"
+          className={errors.email ? 'error' : ''}
+        />
+        {errors.email && <span className="error-text">{errors.email}</span>}
+      </div>
+      
+      <div>
+        <input
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Пароль"
+          className={errors.password ? 'error' : ''}
+        />
+        {errors.password && <span className="error-text">{errors.password}</span>}
+      </div>
+      
+      <button 
+        type="submit"
+        disabled={Object.keys(errors).length > 0}
+      >
+        Отправить
+      </button>
+    </form>
+  );
+}
+```
+## 3. Неконтролируемые компоненты
+### 3.1. Что такое неконтролируемые компоненты?
+Неконтролируемый компонент — это компонент, который хранит свое состояние в DOM, а не в React. Для доступа к значениям используется ref.
+
+```jsx
+import { useRef } from 'react';
+
+function UncontrolledInput() {
+  const inputRef = useRef(null);
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    // Получаем значение через ref
+    console.log('Значение:', inputRef.current.value);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input 
+        type="text" 
+        ref={inputRef}        // Ref для доступа к DOM элементу
+        defaultValue=""       // Начальное значение
+        placeholder="Введите текст"
+      />
+      <button type="submit">Отправить</button>
+    </form>
+  );
+}
+3.2. Использование ref для доступа к DOM
+jsx
+function UncontrolledForm() {
+  const formRef = useRef(null);
+  const fileInputRef = useRef(null);
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    
+    // Получаем данные формы через FormData
+    const formData = new FormData(formRef.current);
+    
+    // Доступ к отдельным полям
+    const username = formRef.current.elements.username.value;
+    const email = formRef.current.elements.email.value;
+    const file = fileInputRef.current.files[0];
+    
+    console.log('Данные формы:', {
+      username,
+      email,
+      fileName: file?.name
+    });
+  };
+  
+  const handleFileChange = () => {
+    const file = fileInputRef.current.files[0];
+    if (file) {
+      console.log('Выбран файл:', file.name, file.size);
+    }
+  };
+  
+  return (
+    <form ref={formRef} onSubmit={handleSubmit}>
+      {/* Текстовые поля с defaultValue */}
+      <input
+        name="username"
+        type="text"
+        defaultValue=""
+        placeholder="Имя пользователя"
+      />
+      
+      <input
+        name="email"
+        type="email"
+        defaultValue=""
+        placeholder="Email"
+      />
+      
+      {/* File input всегда неконтролируемый */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        onChange={handleFileChange}
+      />
+      
+      {/* Textarea с defaultValue */}
+      <textarea
+        name="bio"
+        defaultValue=""
+        placeholder="Биография"
+      />
+      
+      <button type="submit">Отправить</button>
+    </form>
+  );
+}
+```
+### 3.3. Когда использовать неконтролируемые компоненты
+Подходящие случаи:
+
+Файловые input'ы (всегда неконтролируемые)
+
+Одноразовый submit без валидации
+
+Интеграция с не-React кодом
+
+Большие формы с множеством полей
+
+Пример с файлом:
+
+```jsx
+function FileUpload() {
+  const fileInputRef = useRef(null);
+  const [fileName, setFileName] = useState('');
+  
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setFileName(file.name);
+      
+      // Можно работать с файлом напрямую
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        console.log('Содержимое файла:', e.target.result);
+      };
+      reader.readAsText(file);
+    }
+  };
+  
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const file = fileInputRef.current.files[0];
+    
+    if (file) {
+      // Отправка файла на сервер
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <label htmlFor="file-upload">Выберите файл:</label>
+        <input
+          id="file-upload"
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileChange}
+        />
+        {fileName && <p>Выбран файл: {fileName}</p>}
+      </div>
+      
+      <button type="submit">Загрузить</button>
+    </form>
+  );
+}
+```
+## 4. Сравнение подходов
+|Критерий	            |Контролируемые      |	Неконтролируемые        |
+|Управление значением   |React state         |	DOM                     |
+|Обновление значения    |onChange + setState |	Прямое через DOM        |
+|Получение значения     |	Из state	     |  Через ref               |
+|Валидация              |В реальном времени  |	При submit              |
+|Производительность     |Может быть медленнее|	Быстрее для больших форм|
+|Тестирование           |Легко тестировать	 |  Сложнее тестировать     |
+
+## 5. Практические примеры
+### 5.1. Поиск с debounce (контролируемый)
+```jsx
+function SearchWithDebounce() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Используем useRef для хранения таймера
+  const debounceRef = useRef(null);
+  
+  const handleSearch = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      setResults([]);
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Имитация API запроса
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      setResults(data);
+    } catch (error) {
+      console.error('Ошибка поиска:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleChange = (event) => {
+    const value = event.target.value;
+    setQuery(value);
+    
+    // Очищаем предыдущий таймер
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    // Устанавливаем новый таймер
+    debounceRef.current = setTimeout(() => {
+      handleSearch(value);
+    }, 300);
+  };
+  
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={handleChange}
+        placeholder="Поиск..."
+      />
+      
+      {loading && <div>Загрузка...</div>}
+      
+      <div>
+        {results.map((result, index) => (
+          <div key={index}>{result.title}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+5.2. Загрузка файла с предпросмотром
+```jsx
+function FileUploadWithPreview() {
+  const fileInputRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileInfo, setFileInfo] = useState(null);
+  
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    
+    if (file) {
+      setFileInfo({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      // Создаем URL для предпросмотра изображения
+      if (file.type.startsWith('image/')) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl('');
+      }
+    } else {
+      setFileInfo(null);
+      setPreviewUrl('');
+    }
+  };
+  
+  const handleUpload = async (event) => {
+    event.preventDefault();
+    const file = fileInputRef.current.files[0];
+    
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        console.log('Файл успешно загружен');
+        // Очищаем форму
+        fileInputRef.current.value = '';
+        setFileInfo(null);
+        setPreviewUrl('');
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleUpload}>
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileChange}
+          accept="image/*, .pdf, .doc, .docx"
+        />
+      </div>
+      
+      {fileInfo && (
+        <div>
+          <p>Имя: {fileInfo.name}</p>
+          <p>Размер: {(fileInfo.size / 1024 / 1024).toFixed(2)} MB</p>
+          <p>Тип: {fileInfo.type}</p>
+        </div>
+      )}
+      
+      {previewUrl && (
+        <div>
+          <img 
+            src={previewUrl} 
+            alt="Предпросмотр" 
+            style={{ maxWidth: '300px', maxHeight: '300px' }}
+          />
+        </div>
+      )}
+      
+      <button type="submit" disabled={!fileInfo}>
+        Загрузить файл
+      </button>
+    </form>
+  );
+}
+```
+## Выводы
+Обработка событий в React использует синтетические события и camelCase
+
+Контролируемые компоненты управляются через React state
+
+Неконтролируемые компоненты хранят состояние в DOM
+
+Контролируемые компоненты лучше для сложной логики и валидации
+
+Неконтролируемые компоненты лучше для файлов и производительности
+
+Производительность важна при работе с большими формами
+
+## Дополнительные материалы
+1. [React Docs - Обработка событий](https://ru.legacy.reactjs.org/docs/handling-events.html)
+
+2. [React Docs - Контролируемые компоненты](https://ru.legacy.reactjs.org/docs/forms.html#controlled-components)
+
+3. [React Docs - Неконтролируемые компоненты](https://ru.legacy.reactjs.org/docs/uncontrolled-components.html)

@@ -1,0 +1,912 @@
+# Занятие 6. Библиотеки CSS-in-JS для React
+
+## 1. Введение в CSS-in-JS
+### 1.1. Что такое CSS-in-JS?
+CSS-in-JS — это подход, при котором стили пишутся непосредственно в JavaScript-коде, а не в отдельных CSS-файлах.
+
+Традиционный CSS:
+
+```css
+/* styles.css */
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+}
+
+.button:hover {
+  background-color: #0056b3;
+}
+```
+CSS-in-JS:
+
+```jsx
+// Component.jsx
+import styled from 'styled-components';
+
+const Button = styled.button`
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  
+  &:hover {
+    background-color: #0056b3;
+  }
+;
+```
+### 1.2. Преимущества CSS-in-JS
+Изоляция стилей - нет конфликтов имен классов
+
+Динамические стили - основанные на props и state
+
+Типизация - полная поддержка TypeScript
+
+Удаление неиспользуемого кода - автоматическое tree-shaking
+
+Темы - встроенная поддержка дизайн-систем
+
+## 2. Styled Components
+### 2.1. Базовая настройка и синтаксис
+```jsx
+// App.jsx
+import styled from 'styled-components';
+
+// Базовые стилизованные компоненты
+const Container = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+`;
+
+const Button = styled.button`
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const PrimaryButton = styled(Button)`
+  background-color: #007bff;
+  color: white;
+  
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
+function App() {
+  return (
+    <Container>
+      <h1>Styled Components Demo</h1>
+      <Button>Обычная кнопка</Button>
+      <PrimaryButton>Основная кнопка</PrimaryButton>
+    </Container>
+  );
+}
+```
+### 2.2. Динамические стили на основе props
+```jsx
+import styled, { css } from 'styled-components';
+
+// Компонент с динамическими стилями
+const StyledButton = styled.button`
+  padding: ${props => props.size === 'large' ? '16px 32px' : '12px 24px'};
+  font-size: ${props => props.size === 'large' ? '18px' : '16px'};
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  // Варианты на основе props
+  ${props => {
+    switch (props.variant) {
+      case 'primary':
+        return css`
+          background-color: #007bff;
+          color: white;
+          &:hover { background-color: #0056b3; }
+        `;
+      case 'secondary':
+        return css`
+          background-color: #6c757d;
+          color: white;
+          &:hover { background-color: #545b62; }
+        `;
+      case 'outline':
+        return css`
+          background-color: transparent;
+          color: #007bff;
+          border: 2px solid #007bff;
+          &:hover {
+            background-color: #007bff;
+            color: white;
+          }
+        `;
+      default:
+        return css`
+          background-color: #f8f9fa;
+          color: #212529;
+          &:hover { background-color: #e2e6ea; }
+        `;
+    }
+  }}
+  
+  // Отключенное состояние
+  ${props => props.disabled && css`
+    opacity: 0.6;
+    cursor: not-allowed;
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  `}
+`;
+
+// Использование
+function ButtonDemo() {
+  return (
+    <div>
+      <StyledButton variant="primary" size="large">
+        Большая основная
+      </StyledButton>
+      <StyledButton variant="secondary">
+        Средняя второстепенная
+      </StyledButton>
+      <StyledButton variant="outline" disabled>
+        Отключенная контурная
+      </StyledButton>
+    </div>
+  );
+}
+```
+### 2.3. Расширенные компоненты и наследование
+```jsx
+import styled from 'styled-components';
+
+// Базовый компонент с общими стилями
+const BaseCard = styled.div`
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+`;
+
+// Специализированные карточки
+const ProductCard = styled(BaseCard)`
+  border-left: 4px solid #007bff;
+  background: white;
+  
+  h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+  }
+  
+  p {
+    color: #666;
+    margin: 0;
+  }
+`;
+
+const AlertCard = styled(BaseCard)`
+  border-left: 4px solid ${props => {
+    switch (props.type) {
+      case 'error': return '#dc3545';
+      case 'warning': return '#ffc107';
+      case 'success': return '#28a745';
+      default: return '#6c757d';
+    }
+  }};
+  background-color: ${props => {
+    switch (props.type) {
+      case 'error': return '#f8d7da';
+      case 'warning': return '#fff3cd';
+      case 'success': return '#d4edda';
+      default: return '#f8f9fa';
+    }
+  }};
+`;
+
+// Использование
+function CardsDemo() {
+  return (
+    <div>
+      <ProductCard>
+        <h3>Название продукта</h3>
+        <p>Описание продукта</p>
+      </ProductCard>
+      
+      <AlertCard type="success">
+        Операция завершена успешно!
+      </AlertCard>
+      
+      <AlertCard type="error">
+        Произошла ошибка при выполнении операции
+      </AlertCard>
+    </div>
+  );
+}
+```
+### 2.4. Темы и глобальные стили
+```jsx
+// theme.js
+export const lightTheme = {
+  colors: {
+    primary: '#007bff',
+    secondary: '#6c757d',
+    success: '#28a745',
+    danger: '#dc3545',
+    warning: '#ffc107',
+    background: '#ffffff',
+    text: '#212529',
+    border: '#dee2e6'
+  },
+  spacing: {
+    xs: '4px',
+    sm: '8px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px'
+  },
+  borderRadius: '6px',
+  shadows: {
+    sm: '0 1px 3px rgba(0,0,0,0.1)',
+    md: '0 4px 6px rgba(0,0,0,0.1)',
+    lg: '0 10px 15px rgba(0,0,0,0.1)'
+  }
+};
+
+export const darkTheme = {
+  colors: {
+    primary: '#0d6efd',
+    secondary: '#6c757d',
+    success: '#198754',
+    danger: '#dc3545',
+    warning: '#ffc107',
+    background: '#121212',
+    text: '#f8f9fa',
+    border: '#495057'
+  },
+  spacing: { /* same as light */ },
+  borderRadius: '6px',
+  shadows: {
+    sm: '0 1px 3px rgba(255,255,255,0.1)',
+    md: '0 4px 6px rgba(255,255,255,0.1)',
+    lg: '0 10px 15px rgba(255,255,255,0.1)'
+  }
+};
+```
+```jsx
+// App.jsx
+import { ThemeProvider, createGlobalStyle } from 'styled-components';
+import { lightTheme, darkTheme } from './theme';
+
+// Глобальные стили
+const GlobalStyle = createGlobalStyle`
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background-color: ${props => props.theme.colors.background};
+    color: ${props => props.theme.colors.text};
+    transition: all 0.3s ease;
+  }
+  
+  a {
+    color: ${props => props.theme.colors.primary};
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
+// Тематизированные компоненты
+const ThemedButton = styled.button`
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  background-color: ${props => props.theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: ${props => props.theme.borderRadius};
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: ${props => props.theme.shadows.sm};
+  
+  &:hover {
+    box-shadow: ${props => props.theme.shadows.md};
+  }
+`;
+
+function App() {
+  const [isDark, setIsDark] = useState(false);
+  
+  return (
+    <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <GlobalStyle />
+      <div>
+        <ThemedButton onClick={() => setIsDark(!isDark)}>
+          Переключить тему
+        </ThemedButton>
+        <h1>Демо тем</h1>
+        {/* Остальное содержимое */}
+      </div>
+    </ThemeProvider>
+  );
+}
+```
+## 3. Emotion
+### 3.1. Два способа использования Emotion
+
+```jsx
+import styled from '@emotion/styled';
+
+const Container = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+`;
+
+const Button = styled.button(
+  {
+    padding: '12px 24px',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '16px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    
+    '&:hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+    }
+  },
+  // Динамические стили на основе props
+  props => ({
+    backgroundColor: props.primary ? '#007bff' : '#f8f9fa',
+    color: props.primary ? 'white' : '#212529',
+    
+    '&:hover': {
+      backgroundColor: props.primary ? '#0056b3' : '#e2e6ea'
+    }
+  })
+);
+
+function EmotionStyledDemo() {
+  return (
+    <Container>
+      <Button>Обычная кнопка</Button>
+      <Button primary>Основная кнопка</Button>
+    </Container>
+  );
+}
+```
+Способ 2: CSS Prop (более гибкий подход)
+
+```jsx
+/** @jsxImportSource @emotion/react */
+import { css } from '@emotion/react';
+
+const containerStyles = css`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+`;
+
+const buttonStyles = (primary, size = 'medium') => css`
+  padding: ${size === 'large' ? '16px 32px' : '12px 24px'};
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: ${primary ? '#007bff' : '#f8f9fa'};
+  color: ${primary ? 'white' : '#212529'};
+  
+  &:hover {
+    background-color: ${primary ? '#0056b3' : '#e2e6ea'};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+function EmotionCssPropDemo() {
+  return (
+    <div css={containerStyles}>
+      <button css={buttonStyles(false)}>Обычная кнопка</button>
+      <button css={buttonStyles(true, 'large')}>Большая основная</button>
+      
+      {/* Композиция стилей */}
+      <button css={[
+        buttonStyles(true),
+        css`
+          border: 2px solid gold;
+          font-weight: bold;
+        `
+      ]}>
+        Специальная кнопка
+      </button>
+    </div>
+  );
+}
+```
+### 3.2. Продвинутые возможности Emotion
+```jsx
+/** @jsxImportSource @emotion/react */
+import { css, keyframes } from '@emotion/react';
+
+// Анимации
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+// Компонент с анимациями
+const LoadingSpinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: ${spin} 1s linear infinite;
+`;
+
+const AnimatedCard = styled.div`
+  animation: ${fadeIn} 0.5s ease-out;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
+
+// Хук для медиа-запросов
+const breakpoints = {
+  mobile: 768,
+  tablet: 1024,
+  desktop: 1200
+};
+
+const mq = Object.keys(breakpoints).reduce((acc, label) => {
+  acc[label] = `@media (max-width: ${breakpoints[label]}px)`;
+  return acc;
+}, {});
+
+const ResponsiveGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  
+  ${mq.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  ${mq.mobile} {
+    grid-template-columns: 1fr;
+  }
+`;
+
+function AdvancedEmotionDemo() {
+  return (
+    <div>
+      <LoadingSpinner />
+      
+      <AnimatedCard>
+        <h3>Анимированная карточка</h3>
+        <p>Появляется с анимацией</p>
+      </AnimatedCard>
+      
+      <ResponsiveGrid>
+        <div>Элемент 1</div>
+        <div>Элемент 2</div>
+        <div>Элемент 3</div>
+        <div>Элемент 4</div>
+      </ResponsiveGrid>
+    </div>
+  );
+}
+```
+## 4. Stitches - новый игрок
+### 4.1. Типобезопасный CSS-in-JS
+
+```jsx
+import { styled, createStitches } from '@stitches/react';
+
+// Конфигурация Stitches
+export const { styled, css, globalCss, keyframes, getCssText, theme, createTheme, config } =
+  createStitches({
+    theme: {
+      colors: {
+        primary: '#007bff',
+        primaryDark: '#0056b3',
+        gray100: '#f8f9fa',
+        gray800: '#343a40',
+        white: '#ffffff'
+      },
+      space: {
+        1: '4px',
+        2: '8px',
+        3: '16px',
+        4: '24px',
+        5: '32px'
+      },
+      fontSizes: {
+        base: '16px',
+        lg: '18px',
+        xl: '20px'
+      },
+      radii: {
+        base: '6px',
+        lg: '8px'
+      }
+    },
+    media: {
+      mobile: '(max-width: 768px)',
+      tablet: '(max-width: 1024px)'
+    },
+    utils: {
+      // Пользовательские утилиты
+      mx: (value) => ({
+        marginLeft: value,
+        marginRight: value
+      }),
+      my: (value) => ({
+        marginTop: value,
+        marginBottom: value
+      }),
+      px: (value) => ({
+        paddingLeft: value,
+        paddingRight: value
+      }),
+      py: (value) => ({
+        paddingTop: value,
+        paddingBottom: value
+      })
+    }
+  });
+```
+### 4.2. Компоненты с Stitches
+```jsx
+import { styled } from './stitches.config';
+
+// Базовые компоненты
+const Button = styled('button', {
+  // Базовые стили
+  border: 'none',
+  borderRadius: '$base',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  fontFamily: 'inherit',
+  
+  // Варианты
+  variants: {
+    variant: {
+      primary: {
+        backgroundColor: '$primary',
+        color: 'white',
+        '&:hover': {
+          backgroundColor: '$primaryDark'
+        }
+      },
+      secondary: {
+        backgroundColor: '$gray100',
+        color: '$gray800',
+        '&:hover': {
+          backgroundColor: '#e9ecef'
+        }
+      },
+      outline: {
+        backgroundColor: 'transparent',
+        color: '$primary',
+        border: '2px solid $primary',
+        '&:hover': {
+          backgroundColor: '$primary',
+          color: 'white'
+        }
+      }
+    },
+    size: {
+      sm: {
+        padding: '$1 $2',
+        fontSize: '14px'
+      },
+      md: {
+        padding: '$2 $3',
+        fontSize: '$base'
+      },
+      lg: {
+        padding: '$3 $4',
+        fontSize: '$lg'
+      }
+    },
+    disabled: {
+      true: {
+        opacity: 0.6,
+        cursor: 'not-allowed',
+        '&:hover': {
+          transform: 'none'
+        }
+      }
+    }
+  },
+  
+  // Комбинации вариантов
+  compoundVariants: [
+    {
+      variant: 'outline',
+      disabled: true,
+      css: {
+        borderColor: '$gray400',
+        color: '$gray400'
+      }
+    }
+  ],
+  
+  // Значения по умолчанию
+  defaultVariants: {
+    variant: 'primary',
+    size: 'md'
+  }
+});
+
+// Расширенные компоненты
+const IconButton = styled(Button, {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '$1'
+});
+
+// Использование
+function StitchesDemo() {
+  return (
+    <div>
+      <Button>Основная кнопка</Button>
+      <Button variant="secondary" size="lg">
+        Большая второстепенная
+      </Button>
+      <Button variant="outline" disabled>
+        Отключенная контурная
+      </Button>
+      
+      <IconButton>
+        <span>⭐</span>
+        Кнопка с иконкой
+      </IconButton>
+    </div>
+  );
+}
+```
+## 5. Сравнительный анализ
+|Критерий	        |Styled Components      |	Emotion	            |Stitches               |
+|Размер	            |~16KB	                | ~11KB	                |~7KB                   |
+|Производительность	|Хорошая	            | Отличная	            |Отличная               |
+|TypeScript	        |Хорошая поддержка      |Отличная поддержка	    |Исключительная         |
+|Синтаксис	        |Шаблонные литералы     |CSS prop + styled	    |Объектный синтаксис    |
+|Темы	            |Встроенная поддержка   |Встроенная поддержка   |Встроенная поддержка   |
+|Утилиты	        |Нет	                |Нет	                |Продвинутые утилиты    |
+
+
+## 6. Создание дизайн-системы
+### 6.1. Базовые компоненты дизайн-системы
+```jsx
+// design-system/Button.jsx
+import styled from 'styled-components';
+
+export const Button = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  
+  /* Размеры */
+  ${props => {
+    switch (props.size) {
+      case 'sm':
+        return `
+          padding: 8px 12px;
+          font-size: 14px;
+          min-height: 32px;
+        `;
+      case 'lg':
+        return `
+          padding: 12px 20px;
+          font-size: 16px;
+          min-height: 48px;
+        `;
+      default:
+        return `
+          padding: 10px 16px;
+          font-size: 14px;
+          min-height: 40px;
+        `;
+    }
+  }}
+  
+  /* Варианты */
+  ${props => {
+    switch (props.variant) {
+      case 'secondary':
+        return `
+          background-color: #6c757d;
+          color: white;
+          &:hover { background-color: #545b62; }
+        `;
+      case 'outline':
+        return `
+          background-color: transparent;
+          color: #007bff;
+          border: 2px solid #007bff;
+          &:hover {
+            background-color: #007bff;
+            color: white;
+          }
+        `;
+      case 'ghost':
+        return `
+          background-color: transparent;
+          color: #007bff;
+          &:hover {
+            background-color: #f8f9fa;
+          }
+        `;
+      default:
+        return `
+          background-color: #007bff;
+          color: white;
+          &:hover { background-color: #0056b3; }
+        `;
+    }
+  }}
+  
+  /* Состояния */
+  ${props => props.disabled && `
+    opacity: 0.6;
+    cursor: not-allowed;
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  `}
+  
+  ${props => props.fullWidth && `
+    width: 100%;
+  `}
+`;
+
+// Композитные компоненты
+export const IconButton = styled(Button)`
+  padding: 8px;
+  min-width: ${props => {
+    switch (props.size) {
+      case 'sm': return '32px';
+      case 'lg': return '48px';
+      default: return '40px';
+    }
+  }};
+`;
+```
+## 6.2. Компонент Box для композиции
+```jsx
+// design-system/Box.jsx
+import styled from 'styled-components';
+
+export const Box = styled.div`
+  /* Spacing */
+  margin: ${props => props.m || props.margin};
+  margin-top: ${props => props.mt || props.marginTop};
+  margin-right: ${props => props.mr || props.marginRight};
+  margin-bottom: ${props => props.mb || props.marginBottom};
+  margin-left: ${props => props.ml || props.marginLeft};
+  
+  padding: ${props => props.p || props.padding};
+  padding-top: ${props => props.pt || props.paddingTop};
+  padding-right: ${props => props.pr || props.paddingRight};
+  padding-bottom: ${props => props.pb || props.paddingBottom};
+  padding-left: ${props => props.pl || props.paddingLeft};
+  
+  /* Layout */
+  display: ${props => props.display};
+  width: ${props => props.width};
+  height: ${props => props.height};
+  max-width: ${props => props.maxWidth};
+  min-width: ${props => props.minWidth};
+  
+  /* Flexbox */
+  flex: ${props => props.flex};
+  flex-direction: ${props => props.flexDirection};
+  justify-content: ${props => props.justifyContent};
+  align-items: ${props => props.alignItems};
+  gap: ${props => props.gap};
+  
+  /* Colors */
+  background-color: ${props => props.bg || props.backgroundColor};
+  color: ${props => props.color};
+  
+  /* Positioning */
+  position: ${props => props.position};
+  top: ${props => props.top};
+  right: ${props => props.right};
+  bottom: ${props => props.bottom};
+  left: ${props => props.left};
+  
+  /* Misc */
+  border-radius: ${props => props.borderRadius};
+  box-shadow: ${props => props.boxShadow};
+  opacity: ${props => props.opacity};
+`;
+
+// Использование
+function LayoutExample() {
+  return (
+    <Box 
+      display="flex" 
+      gap="16px" 
+      p="24px" 
+      bg="#f8f9fa"
+      borderRadius="8px"
+    >
+      <Box flex="1" p="16px" bg="white" borderRadius="4px">
+        Левая колонка
+      </Box>
+      <Box flex="2" p="16px" bg="white" borderRadius="4px">
+        Правая колонка
+      </Box>
+    </Box>
+  );
+}
+```
+
+
+## Выводы
+CSS-in-JS предоставляет изоляцию стилей и динамические возможности
+
+Styled Components - самый популярный выбор с синтаксисом шаблонных литералов
+
+Emotion предлагает гибкость через css prop и отличную производительность
+
+Stitches обеспечивает лучшую типобезопасность для TypeScript проектов
+
+Дизайн-системы легко строить с помощью CSS-in-JS
+
+Производительность требует внимания к мемоизации и оптимизации
+
+## Дополнительные материалы
+1. [Styled Components Docs](https://styled-components.com/docs)
+
+2. [Emotion Docs](https://emotion.sh/docs/introduction)
+
+3. [Stitches Docs](https://stitches.dev/docs/installation)

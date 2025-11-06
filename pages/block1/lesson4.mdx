@@ -1,0 +1,790 @@
+# Занятие 4. React Hooks. Состояния компонента. useState
+
+
+
+## 1. Введение в React Hooks
+### 1.1. Что такое Hooks?
+Hooks — это функции, которые позволяют использовать состояние и другие возможности React в функциональных компонентах.
+
+Проблема до появления Hooks:
+
+```jsx
+// Классовый компонент (сложно, много boilerplate кода)
+class Counter extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0 };
+    this.increment = this.increment.bind(this);
+  }
+  
+  increment() {
+    this.setState({ count: this.state.count + 1 });
+  }
+  
+  render() {
+    return (
+      <div>
+        <p>Счетчик: {this.state.count}</p>
+        <button onClick={this.increment}>Увеличить</button>
+      </div>
+    );
+  }
+}
+```
+Решение с Hooks:
+
+```jsx
+// Функциональный компонент с useState (просто и понятно)
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  const increment = () => {
+    setCount(count + 1);
+  };
+  
+  return (
+    <div>
+      <p>Счетчик: {count}</p>
+      <button onClick={increment}>Увеличить</button>
+    </div>
+  );
+}
+```
+### 1.2. Правила использования Hooks
+Только на верхнем уровне
+
+Не вызывать Hooks внутри циклов, условий или вложенных функций
+
+Всегда использовать Hooks на верхнем уровне компонента
+
+Только в React-функциях
+
+Вызывать Hooks только из функциональных компонентов
+
+Не вызывать из обычных JavaScript-функций
+
+```jsx
+// ✅ ПРАВИЛЬНО
+function MyComponent() {
+  const [state, setState] = useState(0); // На верхнем уровне
+  // ...
+}
+
+// ❌ НЕПРАВИЛЬНО
+function BadComponent() {
+  if (condition) {
+    const [state, setState] = useState(0); // Внутри условия
+  }
+  
+  for (let i = 0; i < 10; i++) {
+    const [state, setState] = useState(0); // Внутри цикла
+  }
+}
+```
+
+## 2. Что такое состояние компонента?
+### 2.1. Концепция состояния
+Состояние (state) — это данные, которые могут изменяться в течение жизненного цикла компонента и влиять на то, что рендерит компонент.
+
+Ключевые характеристики состояния:
+
+Изменяемость: Состояние может меняться в ответ на действия пользователя, сетевые запросы, таймеры
+
+Реактивность: При изменении состояния компонент автоматически перерисовывается
+
+Локальность: Состояние принадлежит конкретному компоненту (но может передаваться вниз через props)
+
+### 2.2. State vs Props
+|Аспект      |	State              |	Props|
+|Изменяемость|	Можно изменять     |	Только для чтения|
+|Источник    |	Внутри компонента  |	От родительского компонента|
+|Назначение  |	Управление данными | компонента	Передача данных в компонент|
+|Обновление  |	Вызывает ререндер  |	Вызывает ререндер при изменении|
+```jsx
+// Props - получаем извне, неизменяемы
+function UserCard({ userName, userAge }) {
+  // userName и userAge - props, мы не можем их изменять
+  return <div>{userName}, {userAge} лет</div>;
+}
+
+// State - управляем внутри компонента
+function Counter() {
+  // count - состояние, мы можем его изменять
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Счетчик: {count}</p>
+      <button onClick={() => setCount(count + 1)}>
+        Увеличить
+      </button>
+    </div>
+  );
+}
+```
+## 3. Хук useState
+### 3.1. Синтаксис и базовое использование
+useState — это Hook, который позволяет добавлять состояние в функциональные компоненты.
+
+```jsx
+import { useState } from 'react';
+
+function Example() {
+  // Объявление переменной состояния "count"
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Вы кликнули {count} раз</p>
+      <button onClick={() => setCount(count + 1)}>
+        Нажми на меня
+      </button>
+    </div>
+  );
+}
+```
+Разберем синтаксис:
+
+```jsx
+const [state, setState] = useState(initialState);
+```
+state — текущее значение состояния
+
+setState — функция для обновления состояния
+
+initialState — начальное значение состояния
+
+### 3.2. Различные типы начального состояния
+```jsx
+function VariousStates() {
+  // Число
+  const [count, setCount] = useState(0);
+  
+  // Строка
+  const [name, setName] = useState('');
+  
+  // Булево значение
+  const [isVisible, setIsVisible] = useState(false);
+  
+  // Массив
+  const [items, setItems] = useState([]);
+  
+  // Объект
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    age: 0
+  });
+  
+  // null или undefined
+  const [data, setData] = useState(null);
+  
+  return (
+    <div>
+      {/* Компонент использует различные состояния */}
+    </div>
+  );
+}
+```
+### 3.3. Ленивая инициализация состояния
+Если начальное состояние вычисляется дорого, можно передать функцию:
+
+```jsx
+// ❌ ПЛОХО - функция выполняется при каждом рендере
+const [data, setData] = useState(expensiveCalculation());
+
+// ✅ ХОРОШО - функция выполняется только при первом рендере
+const [data, setData] = useState(() => expensiveCalculation());
+
+// Пример
+function ExpensiveComponent() {
+  const [data, setData] = useState(() => {
+    console.log('Выполняется тяжелое вычисление...');
+    // Тяжелые вычисления только при первом рендере
+    return Array.from({ length: 1000 }, (_, i) => i * i);
+  });
+  
+  return <div>Количество элементов: {data.length}</div>;
+}
+```
+## 4. Правильное обновление состояния
+### 4.1. Прямое обновление vs Функциональное обновление
+Прямое обновление (для простых значений):
+
+``` jsx
+function SimpleUpdate() {
+  const [count, setCount] = useState(0);
+  
+  // ✅ Для простых значений
+  const increment = () => {
+    setCount(count + 1);
+  };
+  
+  const reset = () => {
+    setCount(0);
+  };
+  
+  return (
+    <div>
+      <p>Счетчик: {count}</p>
+      <button onClick={increment}>+1</button>
+      <button onClick={reset}>Сброс</button>
+    </div>
+  );
+}
+```
+Функциональное обновление (когда новое состояние зависит от предыдущего):
+
+```jsx
+function FunctionalUpdate() {
+  const [count, setCount] = useState(0);
+  
+  // ✅ Функциональное обновление
+  const increment = () => {
+    setCount(prevCount => prevCount + 1);
+  };
+  
+  const incrementTwice = () => {
+    // ❌ Проблема - обе операции используют одно значение count
+    // setCount(count + 1);
+    // setCount(count + 1);
+    
+    // ✅ Решение - функциональное обновление
+    setCount(prevCount => prevCount + 1);
+    setCount(prevCount => prevCount + 1);
+  };
+  
+  return (
+    <div>
+      <p>Счетчик: {count}</p>
+      <button onClick={increment}>+1</button>
+      <button onClick={incrementTwice}>+2 (функционально)</button>
+    </div>
+  );
+}
+```
+### 4.2. Обновление объектов и массивов
+Объекты (неизменяемое обновление):
+
+```jsx
+function UserProfile() {
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    age: 0,
+    address: {
+      city: '',
+      country: ''
+    }
+  });
+  
+  // ❌ НЕПРАВИЛЬНО - мутация объекта
+  const updateNameWrong = (newName) => {
+    user.name = newName; // Мутация!
+    setUser(user); // Не сработает - тот же объект
+  };
+  
+  // ✅ ПРАВИЛЬНО - создание нового объекта
+  const updateName = (newName) => {
+    setUser(prevUser => ({
+      ...prevUser,        // Копируем все свойства
+      name: newName       // Обновляем нужное свойство
+    }));
+  };
+  
+  // ✅ Обновление вложенных объектов
+  const updateCity = (newCity) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      address: {
+        ...prevUser.address, // Копируем вложенный объект
+        city: newCity
+      }
+    }));
+  };
+  
+  // ✅ Обновление нескольких полей
+  const updateUser = (updates) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      ...updates
+    }));
+  };
+  
+  return (
+    <div>
+      <input 
+        value={user.name}
+        onChange={(e) => updateName(e.target.value)}
+        placeholder="Имя"
+      />
+      <input 
+        value={user.address.city}
+        onChange={(e) => updateCity(e.target.value)}
+        placeholder="Город"
+      />
+    </div>
+  );
+}
+```
+Массивы (неизменяемое обновление):
+
+```jsx
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  
+  // ✅ Добавление элемента
+  const addTodo = () => {
+    if (inputValue.trim()) {
+      setTodos(prevTodos => [
+        ...prevTodos,
+        { 
+          id: Date.now(), 
+          text: inputValue, 
+          completed: false 
+        }
+      ]);
+      setInputValue('');
+    }
+  };
+  
+  // ✅ Удаление элемента
+  const deleteTodo = (id) => {
+    setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+  };
+  
+  // ✅ Обновление элемента
+  const toggleTodo = (id) => {
+    setTodos(prevTodos => 
+      prevTodos.map(todo => 
+        todo.id === id 
+          ? { ...todo, completed: !todo.completed }
+          : todo
+      )
+    );
+  };
+  
+  // ✅ Очистка массива
+  const clearTodos = () => {
+    setTodos([]);
+  };
+  
+  return (
+    <div>
+      <input 
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        placeholder="Новая задача"
+      />
+      <button onClick={addTodo}>Добавить</button>
+      
+      <ul>
+        {todos.map(todo => (
+          <li key={todo.id}>
+            <span 
+              style={{ 
+                textDecoration: todo.completed ? 'line-through' : 'none' 
+              }}
+              onClick={() => toggleTodo(todo.id)}
+            >
+              {todo.text}
+            </span>
+            <button onClick={() => deleteTodo(todo.id)}>
+              Удалить
+            </button>
+          </li>
+        ))}
+      </ul>
+      
+      <button onClick={clearTodos}>Очистить все</button>
+    </div>
+  );
+}
+```
+## 5. Практические примеры и паттерны
+### 5.1. Управление формой с useState
+```jsx
+function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+    subscribe: false
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Обработчик изменений для всех полей
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Очищаем ошибку при изменении поля
+    if (errors[name]) {
+      setErrors(prevErrors => ({
+        ...prevErrors,
+        [name]: ''
+      }));
+    }
+  };
+  
+  // Валидация формы
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Имя обязательно';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email обязателен';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email некорректен';
+    }
+    
+    if (!formData.message.trim()) {
+      newErrors.message = 'Сообщение обязательно';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  // Отправка формы
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Имитация API запроса
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Данные формы:', formData);
+      alert('Форма успешно отправлена!');
+      
+      // Сброс формы
+      setFormData({
+        name: '',
+        email: '',
+        message: '',
+        subscribe: false
+      });
+    } catch (error) {
+      console.error('Ошибка:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="contact-form">
+      <div className="form-group">
+        <label htmlFor="name">Имя:</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          value={formData.name}
+          onChange={handleChange}
+          className={errors.name ? 'error' : ''}
+        />
+        {errors.name && <span className="error-text">{errors.name}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="email">Email:</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          className={errors.email ? 'error' : ''}
+        />
+        {errors.email && <span className="error-text">{errors.email}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="message">Сообщение:</label>
+        <textarea
+          id="message"
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          rows="4"
+          className={errors.message ? 'error' : ''}
+        />
+        {errors.message && <span className="error-text">{errors.message}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label>
+          <input
+            type="checkbox"
+            name="subscribe"
+            checked={formData.subscribe}
+            onChange={handleChange}
+          />
+          Подписаться на рассылку
+        </label>
+      </div>
+      
+      <button 
+        type="submit" 
+        disabled={isSubmitting}
+        className="submit-btn"
+      >
+        {isSubmitting ? 'Отправка...' : 'Отправить'}
+      </button>
+    </form>
+  );
+}
+```
+### 5.2. Кастомный хук для управления формой
+```jsx
+// Кастомный хук useForm
+function useForm(initialValues = {}, validateFn = null) {
+  const [values, setValues] = useState(initialValues);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    setValues(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Валидация на лету
+    if (validateFn && errors[name]) {
+      const newErrors = validateFn(values);
+      setErrors(prev => ({
+        ...prev,
+        [name]: newErrors[name] || ''
+      }));
+    }
+  };
+  
+  const setValue = (name, value) => {
+    setValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const reset = () => {
+    setValues(initialValues);
+    setErrors({});
+  };
+  
+  return {
+    values,
+    errors,
+    isSubmitting,
+    handleChange,
+    setValue,
+    setErrors,
+    setIsSubmitting,
+    reset
+  };
+}
+
+// Использование кастомного хука
+function LoginForm() {
+  const { 
+    values, 
+    errors, 
+    handleChange, 
+    setErrors 
+  } = useForm({
+    username: '',
+    password: ''
+  });
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Простая валидация
+    const newErrors = {};
+    if (!values.username) newErrors.username = 'Имя пользователя обязательно';
+    if (!values.password) newErrors.password = 'Пароль обязателен';
+    
+    setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length === 0) {
+      console.log('Вход:', values);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        name="username"
+        value={values.username}
+        onChange={handleChange}
+        placeholder="Имя пользователя"
+      />
+      {errors.username && <span>{errors.username}</span>}
+      
+      <input
+        name="password"
+        type="password"
+        value={values.password}
+        onChange={handleChange}
+        placeholder="Пароль"
+      />
+      {errors.password && <span>{errors.password}</span>}
+      
+      <button type="submit">Войти</button>
+    </form>
+  );
+}
+```
+### 5.3. Управление UI состоянием
+```jsx
+function Dashboard() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('home');
+  const [loadingStates, setLoadingStates] = useState({
+    profile: false,
+    notifications: false,
+    settings: false
+  });
+  
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => !prev);
+  };
+  
+  const setLoading = (key, isLoading) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      [key]: isLoading
+    }));
+  };
+  
+  const handleTabClick = async (tabName) => {
+    setActiveTab(tabName);
+    setLoading(tabName, true);
+    
+    // Имитация загрузки данных
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setLoading(tabName, false);
+  };
+  
+  return (
+    <div className="dashboard">
+      <button onClick={toggleSidebar}>
+        {isSidebarOpen ? 'Скрыть' : 'Показать'} сайдбар
+      </button>
+      
+      <div className="tabs">
+        {['home', 'profile', 'settings', 'notifications'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => handleTabClick(tab)}
+            className={activeTab === tab ? 'active' : ''}
+            disabled={loadingStates[tab]}
+          >
+            {tab}
+            {loadingStates[tab] && ' (загрузка...)'}
+          </button>
+        ))}
+      </div>
+      
+      <div className="content">
+        {activeTab === 'home' && <HomeTab />}
+        {activeTab === 'profile' && <ProfileTab />}
+        {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'notifications' && <NotificationsTab />}
+      </div>
+    </div>
+  );
+}
+```
+## 6. Распространенные ошибки и лучшие практики
+### 6.1. Частые ошибки
+Ошибка 1: Прямая мутация состояния
+
+```jsx
+// ❌ НЕПРАВИЛЬНО
+const [user, setUser] = useState({ name: 'John' });
+user.name = 'Jane'; // Мутация!
+setUser(user); // Не сработает
+
+// ✅ ПРАВИЛЬНО
+setUser(prevUser => ({ ...prevUser, name: 'Jane' }));
+```
+Ошибка 2: Использование текущего состояния для нескольких обновлений
+
+```jsx
+// ❌ НЕПРАВИЛЬНО
+const [count, setCount] = useState(0);
+const incrementTwice = () => {
+  setCount(count + 1); // count = 0
+  setCount(count + 1); // count все еще = 0
+}; // Результат: count = 1
+
+// ✅ ПРАВИЛЬНО
+const incrementTwice = () => {
+  setCount(prev => prev + 1);
+  setCount(prev => prev + 1);
+}; // Результат: count = 2
+```
+Ошибка 3: Забыть про предыдущее состояние при обновлении объектов
+
+```jsx
+// ❌ НЕПРАВИЛЬНО
+const [config, setConfig] = useState({ theme: 'dark', language: 'ru' });
+setConfig({ language: 'en' }); // Потеряли theme!
+
+// ✅ ПРАВИЛЬНО
+setConfig(prev => ({ ...prev, language: 'en' }));
+```
+### 6.2. Лучшие практики
+Практика 1: Разделение связанного состояния
+
+```jsx
+// ❌ ПЛОХО - несвязанные данные в одном состоянии
+const [pageState, setPageState] = useState({
+  user: null,
+  posts: [],
+  isLoading: false,
+  error: null
+});
+
+// ✅ ХОРОШО - разделение на логические части
+const [user, setUser] = useState(null);
+const [posts, setPosts] = useState([]);
+const [isLoading, setIsLoading] = useState(false);
+const [error, setError] = useState(null);
+```
+
+## Выводы
+useState позволяет добавлять состояние в функциональные компоненты
+
+Состояние — это изменяемые данные компонента
+
+Обновление состояния всегда должно быть неизменяемым
+
+Функциональное обновление используется когда новое состояние зависит от предыдущего
+
+Разделение состояния на логические части улучшает читаемость кода
+
+## Дополнительные материалы
+1. [React Docs - useState](https://react.dev/reference/react/useState)
+
+2. [Использование состояния в React](https://ru.legacy.reactjs.org/docs/hooks-state.html)
+
+3. [Практические примеры useState](https://metanit.com/web/react/3.3.php)

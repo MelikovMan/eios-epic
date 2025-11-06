@@ -1,0 +1,316 @@
+# JSX: JavaScript XML
+## 1. Введение в JSX
+### 1.1. Определение и концепция
+JSX (JavaScript XML) — это расширение синтаксиса JavaScript, которое позволяет писать HTML-подобный код внутри JavaScript-кода.
+
+```jsx
+// Это JSX
+const element = <h1>Hello, world!</h1>;
+```
+Важно понимать:
+
+JSX не является ни HTML, ни строкой
+
+JSX не обязателен для использования React, но сильно упрощает разработку
+
+JSX компилируется в обычный JavaScript код [1]
+
+### 1.2. Зачем нужен JSX?
+Без JSX (React.createElement):
+
+```javascript
+// Чистый JavaScript с React
+const element = React.createElement(
+  'h1',
+  { className: 'greeting' },
+  'Hello, world!'
+);
+```
+С JSX:
+
+```jsx
+// Тот же результат с JSX
+const element = <h1 className="greeting">Hello, world!</h1>;
+```
+Преимущества JSX:
+
+Наглядность: Код легче читать и понимать
+
+Производительность: Лучшая оптимизация при компиляции
+
+Безопасность: Защита от XSS-атак по умолчанию
+
+Инструменты: Поддержка в редакторах кода (подсветка, автодополнение)
+
+## 2. Базовый синтаксис JSX
+### 2.1. Основные правила
+Правило 1: Все теги должны быть закрыты
+
+```jsx
+// ✅ Правильно
+<div>
+  <input type="text" />
+  <br />
+  <img src="image.jpg" alt="Description" />
+</div>
+
+// ❌ Неправильно
+<div>
+  <input type="text">
+  <br>
+  <img src="image.jpg" alt="Description">
+</div>
+```
+Правило 2: Один корневой элемент
+
+```jsx
+// ✅ Правильно
+<div>
+  <h1>Заголовок</h1>
+  <p>Текст</p>
+</div>
+
+
+// ❌ Неправильно
+<h1>Заголовок</h1>
+<p>Текст</p>
+
+// ✅ Альтернатива - React Fragment
+<>
+  <h1>Заголовок</h1>
+  <p>Текст</p>
+</>
+```
+Правило 3: Использование className вместо class
+```jsx
+// ✅ Правильно
+<div className="container active">
+  <button className="btn btn-primary">Click me</button>
+</div>
+
+// ❌ Неправильно
+<div class="container active">
+  <button class="btn btn-primary">Click me</button>
+</div>
+```
+### 2.2. Атрибуты в JSX
+HTML-атрибуты vs JSX-атрибуты:
+HTML	JSX	Примечание
+class	className	Из-за зарезервированного слова class в JS
+for	htmlFor	Атрибут for в label
+onclick	onClick	События в camelCase
+tabindex	tabIndex	camelCase для атрибутов
+stroke-width	strokeWidth	kebab-case → camelCase
+```jsx
+// Пример использования атрибутов
+function Form() {
+  return (
+    <form>
+      <label htmlFor="username" className="form-label">
+        Имя пользователя:
+      </label>
+      <input 
+        id="username"
+        type="text"
+        tabIndex={1}
+        autoFocus={true}
+      />
+    </form>
+  );
+}
+```
+## 3. Встраивание JavaScript в JSX
+### 3.1. JavaScript выражения в фигурных скобках
+Любое валидное JavaScript выражение можно вставить в JSX с помощью фигурных скобок {}.
+
+```jsx
+function UserInfo() {
+  const userName = "Анна";
+  const userAge = 25;
+  const isOnline = true;
+  
+  return (
+    <div>
+      {/* Переменные */}
+      <h1>Привет, {userName}!</h1>
+      
+      {/* Вычисления */}
+      <p>Через 5 лет вам будет: {userAge + 5}</p>
+      
+      {/* Условные выражения */}
+      <p>Статус: {isOnline ? 'Онлайн' : 'Офлайн'}</p>
+      
+      {/* Вызовы функций */}
+      <p>Дата: {new Date().toLocaleDateString()}</p>
+      
+      {/* Математические операции */}
+      <p>Случайное число: {Math.random()}</p>
+    </div>
+  );
+}
+```
+### 3.2. Что можно вставлять в {}
+✅ Можно:
+
+Переменные и константы
+
+Вычисления и математические операции
+
+Вызовы функций
+
+Тернарные операторы
+
+Элементы JSX
+
+Массивы (с оговорками)
+
+❌ Нельзя:
+
+Операторы (if, for, while)
+
+Объявления переменных (const, let, var)
+
+Объекты (кроме стилей)
+
+```jsx
+function Examples() {
+  const items = ['Яблоко', 'Банан', 'Апельсин'];
+  const user = { name: 'Анна', age: 25 };
+  
+  return (
+    <div>
+      {/* ✅ Переменные */}
+      <p>Имя: {user.name}</p>
+      
+      {/* ✅ Тернарный оператор */}
+      <p>Возраст: {user.age > 18 ? 'Взрослый' : 'Ребенок'}</p>
+      
+      {/* ✅ Вызов функции */}
+      <p>Длина имени: {user.name.length}</p>
+      
+      {/* ❌ Оператор if - не работает */}
+      {/* <p>{if(user.age > 18) "Взрослый"}</p> */}
+      
+      {/* ✅ Объект в стилях - специальный случай */}
+      <div style={{ color: 'red', fontSize: '20px' }}>
+        Красный текст
+      </div>
+    </div>
+  );
+}
+```
+
+## 4. Как работает JSX под капотом
+### 4.1. Компиляция JSX
+Исходный JSX:
+
+jsx
+const element = (
+  <div className="container">
+    <h1 id="title">Hello, world!</h1>
+    <button onClick={() => console.log('Clicked!')}>
+      Click me
+    </button>
+  </div>
+);
+После компиляции (Babel):
+```javascript
+const element = React.createElement(
+  'div',
+  { className: 'container' },
+  React.createElement(
+    'h1',
+    { id: 'title' },
+    'Hello, world!'
+  ),
+  React.createElement(
+    'button',
+    { onClick: () => console.log('Clicked!') },
+    'Click me'
+  )
+);
+```
+### 4.2. React.createElement
+Синтаксис React.createElement:
+
+```javascript
+React.createElement(
+  type,        // тип элемента ('div', 'h1', компонент)
+  [props],     // объект с атрибутами
+  [...children] // дочерние элементы
+);
+```
+Результат создания элемента:
+
+```javascript
+// Возвращаемый объект (упрощенно)
+{
+  type: 'div',
+  props: {
+    className: 'container',
+    children: [
+      { type: 'h1', props: { id: 'title', children: 'Hello, world!' } },
+      { type: 'button', props: { onClick: fn, children: 'Click me' } }
+    ]
+  }
+}
+```
+
+## 5. Распространенные ошибки
+Ошибка 1: Неправильное закрытие тегов
+
+```jsx
+// ❌ Неправильно
+<div>
+  <img src="photo.jpg">
+  <br>
+</div>
+
+// ✅ Правильно
+<div>
+  <img src="photo.jpg" />
+  <br />
+</div>
+```
+Ошибка 2: Неправильные атрибуты
+
+```jsx
+// ❌ Неправильно
+<div class="container" onclick={handleClick}>
+
+// ✅ Правильно  
+<div className="container" onClick={handleClick}>
+```
+Ошибка 3: Попытка вставить объект
+
+```jsx
+// ❌ Неправильно
+<p>{ {name: 'John'} }</p>
+
+// ✅ Правильно
+<p>{ JSON.stringify({name: 'John'}) }</p>
+```
+
+
+## Выводы
+JSX — это синтаксическое расширение для JavaScript
+
+Все теги должны быть закрыты, включая одиночные
+
+Один корневой элемент на компонент (или использовать Fragment)
+
+JavaScript выражения вставляются через {}
+
+Атрибуты пишутся в camelCase (className, onClick)
+
+JSX компилируется в React.createElement()
+
+Ключи (key) обязательны для элементов списка
+
+## Дополнительные материалы
+1. [React Docs - JSX](https://react.dev/learn/writing-markup-with-jsx)
+
+2. [JSX в деталях](https://ru.legacy.reactjs.org/docs/jsx-in-depth.html)
+
+
+Следующий урок: Мы изучим компоненты и их свойства (props)!

@@ -1,53 +1,11 @@
-# Fun Javascript code!
+# Список литературы
 
-Here's a fun JavaScript code that creates a simple, animated "bouncing ball" effect in the browser:
+1. Официальная документация React – React.dev. [Электронный ресурс].
 
-javascript
-Copy code
+2. Метанит. Руководство по React – Metanit.com. [Электронный ресурс].
 
-```javascript copy showLineNumbers filename="bouncingBall.js"
+3. Стефанов, С. React. Быстрый старт – СПб.: Питер, 2023. – 240 с. 
 
-// Create a canvas
-const canvas = document.createElement("canvas");
-document.body.appendChild(canvas);
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-const ctx = canvas.getContext("2d");
+4. Стащук, Б. React – Полный Курс по React, Redux и Redux Toolkit – Udemy. [Электронный ресурс]. URL: https://www.udemy.com/course/react-polnyi-kurs/ (дата обращения: 01.11.2023).
 
-// Ball properties
-let x = canvas.width / 2;
-let y = canvas.height / 2;
-let dx = 4;
-let dy = 3;
-const radius = 20;
-
-// Draw and animate the ball
-function drawBall() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = "blue";
-  ctx.fill();
-  ctx.closePath();
-
-  // Bounce logic
-  if (x + dx > canvas.width - radius || x + dx < radius) dx = -dx;
-  if (y + dy > canvas.height - radius || y + dy < radius) dy = -dy;
-
-  x += dx;
-  y += dy;
-
-  requestAnimationFrame(drawBall);
-}
-
-// Start animation
-drawBall();
-
-```
-
-## How it works:
-
-- It creates a canvas element in your browser.
-- A ball moves around and bounces off the edges of the window.
-- You can change properties like dx, dy, radius, or fillStyle to customize it.
-- Just paste this code into your browser's console or a JavaScript file linked to an HTML page to see the bouncing ball in action! 🎉
+5. Официальный учебный tutorial: "Крестики-нолики" – React.dev. [Электронный ресурс]. URL: https://ru.reactjs.org/tutorial/tutorial.html (дата обращения: 01.11.2023).

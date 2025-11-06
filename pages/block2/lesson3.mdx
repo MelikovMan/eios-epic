@@ -1,0 +1,475 @@
+# Занятие 3. Серверные компоненты React.
+## 1. Серверные компоненты React
+### 1.1. Что такое серверные компоненты React?
+React Server Components (RSC) — это новая архитектурная парадигма, которая позволяет выполнять рендеринг React-компонентов на сервере, уменьшая объем JavaScript, отправляемого клиенту.
+
+### 1.2. Эволюция рендеринга в React
+```jsx
+// ❌ CSR (Client-Side Rendering) - традиционный подход
+// Весь JavaScript загружается на клиент
+function ClientSideApp() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    // Данные загружаются на клиенте
+    fetch('/api/data').then(res => res.json()).then(setData);
+  }, []);
+  
+  if (!data) return <div>Loading...</div>;
+  return <div>{data.content}</div>;
+}
+
+// ✅ SSR (Server-Side Rendering) - улучшенный подход
+// HTML рендерится на сервере, но гидратируется на клиенте
+export async function getServerSideProps() {
+  const data = await fetchData();
+  return { props: { data } };
+}
+
+function ServerRenderedPage({ data }) {
+  return <div>{data.content}</div>;
+}
+
+// 🚀 RSC (React Server Components) - современный подход
+// Компоненты выполняются на сервере, клиент получает готовый UI
+async function ServerComponent() {
+  const data = await fetchData(); // Выполняется на сервере
+  return <div>{data.content}</div>;
+}
+```
+### 1.3. Ключевые преимущества серверных компонентов
+Уменьшение размера бандла - серверные компоненты не отправляются на клиент
+
+Прямой доступ к серверным ресурсам - базы данных, API, файловая система
+
+Улучшенная производительность - меньше JavaScript для загрузки и выполнения
+
+Лучший SEO - контент рендерится на сервере
+
+Безопасность - чувствительная логика остается на сервере
+
+## 2. Серверные vs Клиентские компоненты
+|Аспект	   |   Серверные компоненты                 |	Клиентские компоненты           |
+|Выполнение	|На сервере                          |	                      На клиенте|
+|Доступ к DOM|Нет                                |	 Да                             |
+|Состояние|	 Нет useState/useReducer             |	 Да                             |
+|Эффекты| Нет useEffect                          |	 Да                             |
+|События|	 Нет onClick/onChange                |	 Да                             |
+|Доступ к API|	 Прямой доступ	                 |   Только через fetch             |
+|Размер бандла|	 Не включается в клиентский бандл|	 Включается в клиентский бандл  |
+
+## 3. Гибридный подход: комбинирование серверных и клиентских компонентов
+### 3.1. Правила композиции компонентов
+```jsx
+// 🟢 ПРАВИЛЬНО: Серверный компонент импортирует клиентский
+async function ProductPage() {
+  const product = await getProduct();
+  
+  return (
+    <div>
+      <ProductDetails product={product} /> {/* Серверный */}
+      <ProductImageGallery images={product.images} /> {/* Серверный */}
+      <AddToCart productId={product.id} /> {/* Клиентский */}
+      <ProductReviews productId={product.id} /> {/* Клиентский */}
+    </div>
+  );
+}
+
+// 🔴 НЕПРАВИЛЬНО: Клиентский компонент не может импортировать серверный
+'use client';
+function ClientComponent() {
+  // ❌ Нельзя импортировать серверный компонент
+  // const ServerComponent = await import('./ServerComponent');
+  
+  return (
+    <div>
+      {/* ❌ Нельзя рендерить серверный компонент внутри клиентского */}
+      {/* <ServerComponent /> */}
+    </div>
+  );
+}
+```
+### 3.2. Передача серверных данных клиентским компонентам
+```jsx
+// Серверный компонент
+async function Dashboard() {
+  const serverData = await getServerData();
+  
+  return (
+    <div>
+      {/* Простые данные передаются как props */}
+      <ClientChart data={serverData.chartData} />
+      
+      {/* Функции нужно оборачивать в серверные действия */}
+      <ClientForm onSubmitAction={updateData} />
+      
+      {/* Компоненты можно передавать как children */}
+      <ClientInteractiveSection>
+        <ServerContent content={serverData.content} />
+      </ClientInteractiveSection>
+    </div>
+  );
+}
+
+// Клиентский компонент
+'use client';
+function ClientChart({ data }) {
+  const [selectedPoint, setSelectedPoint] = useState(null);
+  
+  // Используем переданные серверные данные
+  const chartData = processDataForChart(data);
+  
+  return (
+    <div>
+      <Chart 
+        data={chartData} 
+        onPointClick={setSelectedPoint}
+      />
+      {selectedPoint && <Tooltip data={selectedPoint} />}
+    </div>
+  );
+}
+```
+### 3.3. Серверные действия (Server Actions)
+```jsx
+// app/actions.js
+'use server';
+
+export async function addToCart(productId, quantity) {
+  // Эта функция выполняется на сервере
+  const db = await getDatabase();
+  const user = await getCurrentUser();
+  
+  await db.cart.upsert({
+    where: { userId_productId: { userId: user.id, productId } },
+    update: { quantity: { increment: quantity } },
+    create: { userId: user.id, productId, quantity }
+  });
+  
+  revalidatePath('/cart'); // Инвалидируем кэш
+}
+
+// Серверный компонент
+async function ProductCard({ product }) {
+  return (
+    <div className="product-card">
+      <h3>{product.name}</h3>
+      <p>{product.price} руб.</p>
+      {/* Передаем серверную action в клиентский компонент */}
+      <AddToCartForm 
+        productId={product.id} 
+        addToCartAction={addToCart}
+      />
+    </div>
+  );
+}
+
+// Клиентский компонент
+'use client';
+function AddToCartForm({ productId, addToCartAction }) {
+  const [isPending, startTransition] = useTransition();
+  
+  const handleSubmit = (formData) => {
+    startTransition(async () => {
+      try {
+        await addToCartAction(productId, Number(formData.get('quantity')));
+        // Показать уведомление об успехе
+      } catch (error) {
+        // Обработать ошибку
+      }
+    });
+  };
+  
+  return (
+    <form action={handleSubmit}>
+      <input type="number" name="quantity" defaultValue={1} min={1} />
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Добавляем...' : 'В корзину'}
+      </button>
+    </form>
+  );
+}
+```
+## 4. Оптимизация производительности
+### 4.1. Стратегии кэширования
+```jsx
+// app/products/page.js
+async function ProductsPage() {
+  // Разные стратегии кэширования
+  const [products, userData, analytics] = await Promise.all([
+    // Кэшируется на 5 минут
+    fetch('/api/products', { next: { revalidate: 300 } }),
+    
+    // Кэшируется на время сессии (для персональных данных)
+    fetch('/api/user', { next: { revalidate: 0, tags: ['user'] } }),
+    
+    // Не кэшируется (динамические данные)
+    fetch('/api/analytics', { cache: 'no-store' })
+  ]);
+  
+  const productsData = await products.json();
+  const user = await userData.json();
+  const stats = await analytics.json();
+  
+  return (
+    <div>
+      <WelcomeBanner user={user} />
+      <ProductGrid products={productsData} />
+      <RealTimeStats stats={stats} />
+    </div>
+  );
+}
+```
+### 4.2. Постепенная загрузка клиентских компонентов
+```jsx
+// Серверный компонент
+async function HomePage() {
+  const featuredProducts = await getFeaturedProducts();
+  
+  return (
+    <div>
+      <HeroSection />
+      
+      {/* Критически важный контент рендерится сразу */}
+      <ProductShowcase products={featuredProducts} />
+      
+      {/* Меньше важные компоненты загружаются лениво */}
+      <Suspense fallback={<RecommendedSkeleton />}>
+        <LazyRecommendedProducts />
+      </Suspense>
+      
+      {/* Интерактивные элементы загружаются лениво */}
+      <Suspense fallback={<InteractiveSkeleton />}>
+        <LazyInteractiveWidget />
+      </Suspense>
+    </div>
+  );
+}
+
+// Ленивая загрузка клиентских компонентов
+const LazyRecommendedProducts = lazy(() => 
+  import('./RecommendedProducts').then(mod => ({
+    default: mod.RecommendedProducts
+  }))
+);
+
+const LazyInteractiveWidget = lazy(() => 
+  import('./InteractiveWidget').then(mod => ({
+    default: mod.InteractiveWidget
+  }))
+);
+```
+### 4.3. Оптимизация изображений и статических ресурсов
+```jsx
+import Image from 'next/image';
+
+async function ProductGallery({ product }) {
+  return (
+    <div className="gallery">
+      {product.images.map((image, index) => (
+        <div key={image.id} className="gallery-item">
+          <Image
+            src={image.url}
+            alt={image.alt || `Изображение продукта ${index + 1}`}
+            width={800}
+            height={600}
+            priority={index === 0} // Приоритетная загрузка первого изображения
+            placeholder="blur"
+            blurDataURL={image.placeholder}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+```
+## 5. Обработка ошибок и загрузки
+### 5.1. Error Boundaries для серверных компонентов
+```jsx
+// app/error.js - Глобальный обработчик ошибок
+'use client';
+
+export default function GlobalError({ error, reset }) {
+  return (
+    <html>
+      <body>
+        <div className="error-container">
+          <h2>Что-то пошло не так!</h2>
+          <button onClick={() => reset()}>
+            Попробовать снова
+          </button>
+        </div>
+      </body>
+    </html>
+  );
+}
+
+// Локальные обработчики ошибок
+async function ProductPage({ params }) {
+  try {
+    const product = await getProduct(params.id);
+    return <ProductDetails product={product} />;
+  } catch (error) {
+    return <ProductError error={error} />;
+  }
+}
+
+function ProductError({ error }) {
+  return (
+    <div className="product-error">
+      <h3>Не удалось загрузить продукт</h3>
+      <p>{error.message}</p>
+      <button onClick={() => window.location.reload()}>
+        Обновить страницу
+      </button>
+    </div>
+  );
+}
+```
+### 5.2. Состояния загрузки
+```jsx
+// app/loading.js - Глобальный loading компонент
+export default function GlobalLoading() {
+  return (
+    <div className="loading-overlay">
+      <div className="spinner"></div>
+      <p>Загрузка...</p>
+    </div>
+  );
+}
+
+// Локальные состояния загрузки
+async function UserProfile({ userId }) {
+  const userPromise = getUser(userId);
+  const postsPromise = getUserPosts(userId);
+  
+  return (
+    <div>
+      <Suspense fallback={<UserHeaderSkeleton />}>
+        <UserHeader userPromise={userPromise} />
+      </Suspense>
+      
+      <Suspense fallback={<PostsSkeleton />}>
+        <UserPosts postsPromise={postsPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+// Компоненты, которые используют промисы
+async function UserHeader({ userPromise }) {
+  const user = await userPromise;
+  return <h1>{user.name}</h1>;
+}
+
+async function UserPosts({ postsPromise }) {
+  const posts = await postsPromise;
+  return posts.map(post => <Post key={post.id} post={post} />);
+}
+```
+## 6. Лучшие практики и антипаттерны
+### 6.1. Лучшие практики
+```jsx
+// ✅ ХОРОШО: Разделение ответственности
+// Серверный компонент - данные и статический контент
+async function BlogPost({ postId }) {
+  const post = await getPost(postId);
+  const relatedPosts = await getRelatedPosts(postId);
+  
+  return (
+    <article>
+      <PostContent post={post} />
+      <RelatedPosts posts={relatedPosts} />
+      <PostComments postId={postId} /> {/* Клиентский компонент */}
+    </article>
+  );
+}
+
+// ✅ ХОРОШО: Использование правильных директив
+'use client'; // Только когда нужны клиентские возможности
+function InteractiveMap({ locations }) {
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  
+  return (
+    <div>
+      <Map locations={locations} onSelect={setSelectedLocation} />
+      {selectedLocation && <LocationDetails location={selectedLocation} />}
+    </div>
+  );
+}
+```
+## 7. Миграция с традиционного React на RSC
+### 7.1. Пошаговая миграция
+```jsx
+// ДО: Традиционный React компонент
+function OldProductPage({ productId }) {
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetch(`/api/products/${productId}`)
+      .then(res => res.json())
+      .then(setProduct)
+      .finally(() => setLoading(false));
+  }, [productId]);
+  
+  if (loading) return <div>Loading...</div>;
+  return <ProductDetails product={product} />;
+}
+
+// ПОСЛЕ: Серверный компонент + клиентские части
+// Серверный компонент (app/products/[id]/page.js)
+async function ProductPage({ params }) {
+  const product = await getProduct(params.id);
+  
+  return (
+    <div>
+      <ProductHeader product={product} />
+      <ProductGallery images={product.images} />
+      <ClientProductActions product={product} />
+    </div>
+  );
+}
+
+// Клиентский компонент (для интерактивных элементов)
+'use client';
+function ClientProductActions({ product }) {
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  
+  const handleAddToCart = async () => {
+    setIsAdding(true);
+    await addToCart(product.id, quantity);
+    setIsAdding(false);
+  };
+  
+  return (
+    <div>
+      <QuantitySelector value={quantity} onChange={setQuantity} />
+      <AddToCartButton 
+        onClick={handleAddToCart} 
+        disabled={isAdding}
+      />
+    </div>
+  );
+}
+```
+## Выводы
+Серверные компоненты выполняются на сервере и не отправляют JavaScript на клиент
+
+Клиентские компоненты требуют директиву 'use client' и поддерживают интерактивность
+
+Гибридный подход позволяет оптимизировать производительность и UX
+
+Серверные actions обеспечивают безопасное выполнение операций на сервере
+
+Кэширование и инвалидация критически важны для производительности
+
+Постепенная миграция - лучший способ перехода на RSC
+
+## Дополнительные материалы
+1. [Next.js Docs - Server Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)
+
+2. [React RFC - Server Components](https://legacy.reactjs.org/blog/2020/12/21/data-fetching-with-react-server-components.html)
