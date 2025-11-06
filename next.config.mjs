@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+
 import nextra from 'nextra'
 
 const withNextra = nextra({
@@ -6,7 +6,7 @@ const withNextra = nextra({
   themeConfig: './theme.config.tsx',
 })
 
-const nextConfig: NextConfig = withNextra({
+const nextConfig= withNextra({
   output: 'export',
   images: {
     unoptimized: true // mandatory, otherwise won't export
