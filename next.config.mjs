@@ -8,6 +8,7 @@ const withNextra = nextra({
 
 const nextConfig= withNextra({
   output: 'export',
+  basePath: "/eios-epic",
   images: {
     unoptimized: true // mandatory, otherwise won't export
   }
