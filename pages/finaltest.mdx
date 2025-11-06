@@ -1,0 +1,16 @@
+import Quiz from 'react-quiz-component';
+import {quiz} from '../src/components/test-content'
+import {appLocale} from '../src/components/test-locale'
+
+<Quiz 
+    quiz={
+        {...quiz,
+        appLocale:appLocale
+        }
+    }
+    shuffle={true}
+    shuffleAnswer={true}
+    timer={600}
+    enableProgressBar={true}
+/>
+
