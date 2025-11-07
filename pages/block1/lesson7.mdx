@@ -96,8 +96,9 @@ function useUser() {
   }
   return context;
 }
-2.2. Использование в приложении
-jsx
+```
+### 2.2. Использование в приложении
+```jsx
 // ✅ РЕШЕНИЕ: Использование контекста
 function App() {
   return (
@@ -143,7 +144,11 @@ function UserMenu() {
   );
 }
 ```
+### 2.3. Диграмма сравнения использование контекста
+![React контекст](/react-context.webp)
+
 ## 3. Практические примеры
+
 ### 3.1. Контекст темы
 ```jsx
 import { createContext, useContext, useState, useMemo } from 'react';

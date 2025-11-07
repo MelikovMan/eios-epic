@@ -61,6 +61,18 @@ const config: DocsThemeConfig = {
     hue : {light : 274 , dark : 279  } ,
     saturation : {light : 100 , dark : 100} ,
   },
+  footer: {
+    content: (
+      <span>
+        MIT {new Date().getFullYear()} ©{'Меликов Роман'}
+        <br/>
+        <a href="https://nextra.site" target="_blank">
+          Nextra
+        </a>
+        .
+      </span>
+    )
+  },
   gitTimestamp: null
 }
 

@@ -44,7 +44,18 @@ function ProductList() {
 ```
 
 ## 2. Redux Toolkit (RTK) - промышленное решение
-### 2.1. Современный Redux - не ваш дедушкин Redux
+
+### 2.1 Архитектура Redux
+
+Основаная идея Redux - сделать состояние глобальным немутриующим объектом, к которому могут обращаться компоненты.
+
+Эти компоненты с помощью вызова функций reducer, хранящий полезные данные в action, пересоздает это хранилище данных в зависимости от reducer и action
+
+В результате получается односторонний поток данных
+
+![Поток данных Redux](/data_flow.jpg)
+
+### 2.2. Современный Redux - не ваш дедушкин Redux
 ```jsx
 // store/store.js
 import { configureStore, createSlice } from '@reduxjs/toolkit';
@@ -81,7 +92,7 @@ export const store = configureStore({
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 ```
-### 2.2. Использование в компонентах с хуками
+### 2.3. Использование в компонентах с хуками
 ```jsx
 // hooks/redux.js
 import { useDispatch, useSelector } from 'react-redux';
@@ -118,7 +129,7 @@ function App() {
   );
 }
 ```
-### 2.3. Асинхронные действия с createAsyncThunk
+### 2.4. Асинхронные действия с createAsyncThunk
 ```jsx
 // store/productsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
@@ -168,8 +179,9 @@ const productsSlice = createSlice({
 
 export const { clearError } = productsSlice.actions;
 export default productsSlice.reducer;
-2.4. RTK Query для работы с API
-jsx
+```
+### 2.5. RTK Query для работы с API
+```jsx
 // store/api.js
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
@@ -547,6 +559,7 @@ function ProductCount() {
 ```
 ## 6. Сравнительный анализ
 |Библиотека	    |Размер	|Подход	                |Кривая обучения	|Лучший случай использования|
+| :----- | :----: | :----: | ----: |
 |Redux Toolkit	|~9KB	|Flux	                |Средняя	        |Крупные приложения, команды|
 |Zustand	    |~1KB	|Публишатель/подписчик	|Низкая	            |Малые/средние приложения   |
 |Jotai	        |~3KB	|Атомарный	            |Средняя	        |Производные состояния      |

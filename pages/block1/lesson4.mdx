@@ -96,6 +96,7 @@ function BadComponent() {
 
 ### 2.2. State vs Props
 |Аспект      |	State              |	Props|
+| :----- | :----: | ----: |
 |Изменяемость|	Можно изменять     |	Только для чтения|
 |Источник    |	Внутри компонента  |	От родительского компонента|
 |Назначение  |	Управление данными | компонента	Передача данных в компонент|
@@ -550,108 +551,7 @@ function ContactForm() {
   );
 }
 ```
-### 5.2. Кастомный хук для управления формой
-```jsx
-// Кастомный хук useForm
-function useForm(initialValues = {}, validateFn = null) {
-  const [values, setValues] = useState(initialValues);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    setValues(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-    
-    // Валидация на лету
-    if (validateFn && errors[name]) {
-      const newErrors = validateFn(values);
-      setErrors(prev => ({
-        ...prev,
-        [name]: newErrors[name] || ''
-      }));
-    }
-  };
-  
-  const setValue = (name, value) => {
-    setValues(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const reset = () => {
-    setValues(initialValues);
-    setErrors({});
-  };
-  
-  return {
-    values,
-    errors,
-    isSubmitting,
-    handleChange,
-    setValue,
-    setErrors,
-    setIsSubmitting,
-    reset
-  };
-}
-
-// Использование кастомного хука
-function LoginForm() {
-  const { 
-    values, 
-    errors, 
-    handleChange, 
-    setErrors 
-  } = useForm({
-    username: '',
-    password: ''
-  });
-  
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Простая валидация
-    const newErrors = {};
-    if (!values.username) newErrors.username = 'Имя пользователя обязательно';
-    if (!values.password) newErrors.password = 'Пароль обязателен';
-    
-    setErrors(newErrors);
-    
-    if (Object.keys(newErrors).length === 0) {
-      console.log('Вход:', values);
-    }
-  };
-  
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        name="username"
-        value={values.username}
-        onChange={handleChange}
-        placeholder="Имя пользователя"
-      />
-      {errors.username && <span>{errors.username}</span>}
-      
-      <input
-        name="password"
-        type="password"
-        value={values.password}
-        onChange={handleChange}
-        placeholder="Пароль"
-      />
-      {errors.password && <span>{errors.password}</span>}
-      
-      <button type="submit">Войти</button>
-    </form>
-  );
-}
-```
-### 5.3. Управление UI состоянием
+### 5.2. Управление UI состоянием
 ```jsx
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

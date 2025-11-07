@@ -95,12 +95,12 @@ const element = <h1 className="greeting">Hello, world!</h1>;
 ```
 ### 2.2. Атрибуты в JSX
 HTML-атрибуты vs JSX-атрибуты:
-HTML	JSX	Примечание
-class	className	Из-за зарезервированного слова class в JS
-for	htmlFor	Атрибут for в label
-onclick	onClick	События в camelCase
-tabindex	tabIndex	camelCase для атрибутов
-stroke-width	strokeWidth	kebab-case → camelCase
+|HTML         |	JSX         | Примечание|
+| :----- | :----: | ----: |
+|class        |	className   |	Из-за зарезервированного слова class в JS|
+|for	        |htmlFor	    |Атрибут for в label|
+|onclick      |	onClick	    |События в camelCase|
+|tabindex     |	tabIndex    |	camelCase для атрибутов|
 ```jsx
 // Пример использования атрибутов
 function Form() {
@@ -150,7 +150,7 @@ function UserInfo() {
 }
 ```
 ### 3.2. Что можно вставлять в {}
-✅ Можно:
+Можно:
 
 Переменные и константы
 
@@ -162,15 +162,16 @@ function UserInfo() {
 
 Элементы JSX
 
-Массивы (с оговорками)
+Массивы
 
-❌ Нельзя:
+Нельзя:
 
 Операторы (if, for, while)
 
 Объявления переменных (const, let, var)
 
-Объекты (кроме стилей)
+
+Другими словами, можно включать лишь те элементы языка, которые однозначно возвращают выражение без побочных эффектов
 
 ```jsx
 function Examples() {
@@ -190,11 +191,7 @@ function Examples() {
       
       {/* ❌ Оператор if - не работает */}
       {/* <p>{if(user.age > 18) "Взрослый"}</p> */}
-      
-      {/* ✅ Объект в стилях - специальный случай */}
-      <div style={{ color: 'red', fontSize: '20px' }}>
-        Красный текст
-      </div>
+    
     </div>
   );
 }
@@ -204,7 +201,7 @@ function Examples() {
 ### 4.1. Компиляция JSX
 Исходный JSX:
 
-jsx
+```jsx
 const element = (
   <div className="container">
     <h1 id="title">Hello, world!</h1>
@@ -213,6 +210,7 @@ const element = (
     </button>
   </div>
 );
+```
 После компиляции (Babel):
 ```javascript
 const element = React.createElement(
@@ -305,7 +303,7 @@ JavaScript выражения вставляются через {}
 
 JSX компилируется в React.createElement()
 
-Ключи (key) обязательны для элементов списка
+Ключи (key) обязательны для элементов списка, алгоритм диффинга действует из предположения, что это так, иначе перестройка списка будет очень дорогостоящей операцией!
 
 ## Дополнительные материалы
 1. [React Docs - JSX](https://react.dev/learn/writing-markup-with-jsx)
