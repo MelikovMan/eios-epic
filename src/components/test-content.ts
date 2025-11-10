@@ -26,11 +26,12 @@ export const quiz = {
       "answerSelectionType": "single",
       "answers": [
         "Это внутреннее состояние компонента",
-        "Это методы жизненного цикла",
         "Это данные, передаваемые от родительского компонента к дочернему",
-        "Это DOM элементы компонента"
+        "Это DOM элементы компонента",
+        "Это методы жизненного цикла компонента",
+        "Это системные настройки React"
       ],
-      "correctAnswer": "3",
+      "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! Props - это свойства, передаваемые от родителя к ребенку.",
       "messageForIncorrectAnswer": "Неправильно. Props передаются от родительского компонента к дочернему.",
       "explanation": "Props (properties) - это объект, содержащий данные, передаваемые от родительского компонента к дочернему. Они доступны только для чтения.",
@@ -59,7 +60,6 @@ export const quiz = {
       "answers": [
         "Управляет состоянием компонента",
         "Выполняет побочные эффекты в функциональных компонентах",
-        "Оптимизирует перерисовки компонентов",
         "Создает ссылки на DOM элементы"
       ],
       "correctAnswer": "2",
@@ -92,7 +92,8 @@ export const quiz = {
         "Для управления локальным состоянием",
         "Для доступа к контексту React",
         "Для создания побочных эффектов",
-        "Для оптимизации производительности"
+        "Для оптимизации производительности",
+        "Для работы с формами"
       ],
       "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! useContext предоставляет доступ к контексту.",
@@ -122,9 +123,7 @@ export const quiz = {
       "answerSelectionType": "single",
       "answers": [
         "Это хук для управления памятью",
-        "Это高阶-компонент для мемоизации компонентов",
-        "Это метод для работы с мемоизированными селекторами",
-        "Это утилита для кэширования API запросов"
+        "Это - компонент для мемоизации компонентов",
       ],
       "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! React.memo мемоизирует компоненты.",
@@ -156,7 +155,6 @@ export const quiz = {
         "Для обработки ошибок",
         "Для ленивой загрузки компонентов",
         "Для управления состоянием приложения",
-        "Для работы с формами"
       ],
       "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! Suspense используется для ленивой загрузки.",
@@ -170,7 +168,6 @@ export const quiz = {
       "answerSelectionType": "single",
       "answers": [
         "Компонент для обработки JavaScript ошибок",
-        "Система валидации пропсов",
         "Инструмент для отладки",
         "Метод для обработки API ошибок"
       ],
@@ -188,11 +185,11 @@ export const quiz = {
         "Redux",
         "Zustand",
         "MobX",
-        "React Router"
+        "Valtio"
       ],
-      "correctAnswer": [1, 2, 3],
+      "correctAnswer": [1, 2, 3, 4],
       "messageForCorrectAnswer": "Верно! Redux, Zustand и MobX - популярные стейт-менеджеры.",
-      "messageForIncorrectAnswer": "Не полностью верно. React Router - для маршрутизации.",
+      "messageForIncorrectAnswer": "Не полностью верно.",
       "explanation": "Библиотеки управления состоянием помогают управлять глобальным состоянием приложения: Redux, Zustand, MobX, Recoil и другие.",
       "point": "5"
     },
@@ -220,11 +217,11 @@ export const quiz = {
         "React Router",
         "Next.js Router",
         "Redux Router",
-        "Vue Router"
+        "Tenstack Router"
       ],
-      "correctAnswer": [1, 2],
-      "messageForCorrectAnswer": "Верно! React Router и Next.js Router - основные решения.",
-      "messageForIncorrectAnswer": "Не полностью верно. Vue Router для Vue.js.",
+      "correctAnswer": [1, 2, 3],
+      "messageForCorrectAnswer": "Верно! React Router и Next.js Router, Tenstack Router - основные решения.",
+      "messageForIncorrectAnswer": "Не полностью верно. Redux Router не существует.",
       "explanation": "React Router - самая популярная библиотека для клиентской маршрутизации, Next.js предоставляет встроенный роутер для SSR.",
       "point": "5"
     },
@@ -236,7 +233,8 @@ export const quiz = {
         "Написание CSS в отдельных .css файлах",
         "Подход, когда CSS пишется непосредственно в JavaScript",
         "Система препроцессоров CSS",
-        "Методология именования CSS классов"
+        "Методология именования CSS классов",
+        "Способ оптимизации CSS"
       ],
       "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! CSS-in-JS - стили в JavaScript.",
@@ -252,9 +250,10 @@ export const quiz = {
         "Material-UI",
         "Mantine",
         "Ant Design",
-        "Bootstrap React"
+        "Bootstrap React",
+        "Chakra UI"
       ],
-      "correctAnswer": [1, 2, 3, 4],
+      "correctAnswer": [1, 2, 3, 4, 5],
       "messageForCorrectAnswer": "Верно! Все перечисленные - популярные UI библиотеки.",
       "messageForIncorrectAnswer": "Не полностью верно. Все варианты верны.",
       "explanation": "Популярные библиотеки компонентов предоставляют готовые UI элементы: Material-UI, Mantine, Ant Design, Chakra UI, React Bootstrap и другие.",
@@ -315,8 +314,6 @@ export const quiz = {
       "answers": [
         "Режим для продакшена",
         "Инструмент для выделения потенциальных проблем",
-        "Тип компонента",
-        "Система валидации пропсов"
       ],
       "correctAnswer": "2",
       "messageForCorrectAnswer": "Правильно! StrictMode помогает находить проблемы.",
